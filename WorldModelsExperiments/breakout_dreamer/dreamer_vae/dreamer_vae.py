@@ -3,6 +3,11 @@ import numpy as np
 import json
 import os
 
+def reset_graph():
+  if 'sess' in globals() and sess:
+    sess.close()
+  tf.reset_default_graph()
+
 class ConvVAE(object):
     def __init__(self, z_size=64, batch_size=100, learning_rate=0.0001, kl_tolerance=0.5, is_training=True, reuse=False,
                  gpu_mode=True):

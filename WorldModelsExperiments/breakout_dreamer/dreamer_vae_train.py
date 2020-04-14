@@ -3,8 +3,7 @@ import random
 import numpy as np
 import os
 import json
-from WorldModelsExperiments.breakout_dreamer.dreamer_vae.dreamer_vae import ConvVAE
-from WorldModelsExperiments.breakout_dreamer.env import reset_graph
+from WorldModelsExperiments.breakout_dreamer.dreamer_vae.dreamer_vae import ConvVAE, reset_graph
 
 # Hyperparameters for ConvVAE
 z_size=64
