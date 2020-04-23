@@ -209,7 +209,6 @@ def simulate(model, train_mode=False, render_mode=True, num_episode=5, seed=-1, 
       obs, reward, done, info = model.env.step(action)
 
       if prev_info['ale.lives']>info['ale.lives']:
-        print(info['ale.lives'])
         model.env.step(1)
 
       prev_info = info
@@ -270,10 +269,10 @@ def main():
 
   render_mode = True  # args.render
 
-  rnn_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v2/200228/tf_rnn_10000/rnn.json'
-  vae_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v2/200228/tf_vae/vae.json'
+  rnn_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/tf_rnn/rnn.json'
+  vae_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/tf_vae/vae.json'
 
-  file = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v2/200312/log/breakout.cma.16.64.best.json'
+  file = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/log/breakout.cma.16.32.best.json'
 
   if file: #args.file
     use_model = True
