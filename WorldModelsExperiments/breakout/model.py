@@ -190,9 +190,12 @@ def simulate(model, train_mode=False, render_mode=True, num_episode=5, seed=-1, 
       obs = deepcopy(model.env.reset())
     #obs = _process_frame(obs)
 
+    t=0
     total_reward = 0.0
+    done = False
+    prev_info = {"ale.lives": model.env.ale.lives()}
 
-    for t in range(max_episode_length):
+    while not done:
       if render_mode:
         model.env.render("human")
         model.env.unwrapped.viewer.window.on_key_press = key_press
@@ -205,10 +208,18 @@ def simulate(model, train_mode=False, render_mode=True, num_episode=5, seed=-1, 
       _, action = model.get_action(z)
       obs, reward, done, info = model.env.step(action)
 
+      if prev_info['ale.lives']>info['ale.lives']:
+        print(info['ale.lives'])
+        model.env.step(1)
+
+      prev_info = info
+
       action_list.append(int(action))
       observation_list.append(obs)
       #obs = _process_frame(obs)
       total_reward += reward
+      t += 1
+
 
       if done:
         if render_mode:
