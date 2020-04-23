@@ -15,6 +15,7 @@ SEQ_LENGTH = 400  # todo adjust: as long as possible
 INPUT_SHAPE = (64,64)
 
 render_mode = False # for debugging.
+RETRAIN= True
 
 DIR_NAME = 'record'
 if not os.path.exists(DIR_NAME):
@@ -27,9 +28,13 @@ def _process_frame(frame): # converts into (64,64,3)
   obs = obs /255.
   return obs
 
-model = make_model(load_model=False)
+if RETRAIN:
+  model = make_model(load_model=True, rnn_path='/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/tf_rnn/rnn.json', vae_path='/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/tf_vae/vae.json')
+  model.load_model('log/breakout.cma.16.32.best.json')
+else:
+  model = make_model(load_model=False)
 
-total_frames = 0
+#total_frames = 0
 for trial in range(MAX_TRIALS):  #
   try:
     random_generated_int = random.randint(0, 2**31-1)
@@ -38,6 +43,8 @@ for trial in range(MAX_TRIALS):  #
     recording_action = []
     recording_reward = []
     appended_reward = 0
+    prev_info = {"ale.lives": model.env.ale.lives()}
+    done = False
 
     np.random.seed(random_generated_int)
     model.env.seed(random_generated_int)
@@ -51,15 +58,17 @@ for trial in range(MAX_TRIALS):  #
     if obs is None:
       obs = np.zeros(model.input_size)
 
-    for frame in range(MAX_FRAMES):
+    while not done:
       if render_mode:
         model.env.render("human")
       z, mu, logvar = model.encode_obs(obs)
-      #action_one_hot, action = model.get_action(z) # use more diverse random policy:
 
-      action = model.env.action_space.sample()
-      action_one_hot = np.zeros(model.num_actions)
-      action_one_hot[action] = 1
+      if RETRAIN:
+        action_one_hot, action = model.get_action(z)  # use more diverse random policy:
+      else:
+        action = model.env.action_space.sample()
+        action_one_hot = np.zeros(model.num_actions)
+        action_one_hot[action] = 1
 
       #if frame % repeat == 0:
       #  action = np.random.rand() * 2.0 - 1.0
@@ -71,13 +80,17 @@ for trial in range(MAX_TRIALS):  #
       obs, reward, done, info = model.env.step(action)
       obs = _process_frame(obs)
 
+      if prev_info['ale.lives']>info['ale.lives']:
+        model.env.step(1)
+      prev_info = info
+
       recording_reward.append(reward)
       appended_reward += reward
 
       if done:
         break
 
-    total_frames += frame
+    #total_frames += frame
     #print("dead at", frame, "total recorded frames for this trial", total_frames, " with final reward of ", appended_reward)
     if trial % 100 == 0 and trial > 0:
       print(f'At trial {trial} with an average reward of {statistics.mean(val for val in recording_reward)} ')
