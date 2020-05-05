@@ -13,9 +13,9 @@ kl_tolerance=0.5
 
 # Parameters for training
 NUM_EPOCH = 10
-DATA_DIR = "record"
+DATA_DIR = "/home/dakaun/PycharmProjects/world_model/WorldModelsExperiments/breakout/record"
 
-model_save_path = "tf_vae"
+model_save_path = "tf_vaedream"
 if not os.path.exists(model_save_path):
   os.makedirs(model_save_path)
 
@@ -49,8 +49,8 @@ len_data = int(int(len_data)/100)
 print('length of each trial: ', len_data)
 
 # reload trained model and retrain:
-if 'vae.json' in os.listdir('tf_vae'):
-  vae.load_json('tf_vae/vae.json')
+if 'vae.json' in os.listdir('tf_vaedream'):
+  vae.load_json('tf_vaedream/vae.json')
 
 # train loop:
 print("train", "step", "loss", "recon_loss", "kl_loss")
@@ -81,9 +81,9 @@ for epoch in range(NUM_EPOCH):
       if ((train_step+1) % 500 == 0):
         print("step", (train_step+1), train_loss, r_loss, kl_loss)
       if ((train_step+1) % 5000 == 0):
-        vae.save_json("tf_vae/vae.json")
-with open('tf_vae/vae_train_param3.json', 'w') as pfile:
+        vae.save_json("tf_vaedream/vae.json")
+with open('tf_vaedream/vae_train_param.json', 'w') as pfile:
   json.dump(train_param, pfile, sort_keys=True)
 # finished, final model:
-print('training done, save final model')
-vae.save_json("tf_vae/vae.json")
+print('vae dreamer training done, save final model')
+vae.save_json("tf_vaedream/vae.json")

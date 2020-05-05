@@ -17,6 +17,7 @@ TEMPERATURE = 1.25 # train with this temperature
 
 HyperParams = namedtuple('HyperParams', ['max_seq_len',
                                          'seq_width',
+                                         'num_actions',
                                          'rnn_size',
                                          'batch_size',
                                          'grad_clip',
@@ -38,6 +39,7 @@ HyperParams = namedtuple('HyperParams', ['max_seq_len',
 def default_hps():
   return HyperParams(max_seq_len=1000, # train on sequences of 1000
                      seq_width=64,    # width of our data (64)
+                     num_actions=4,
                      rnn_size=model_rnn_size,    # number of rnn cells
                      batch_size=100,   # minibatch sizes
                      grad_clip=1.0,
@@ -63,7 +65,7 @@ def reset_graph():
     sess.close()
   tf.reset_default_graph()
 
-  class Model():
+class RNNModel():
   def __init__(self, hps, gpu_mode=True, reuse=False):
     self.hps = hps
     with tf.variable_scope('mdn_rnn', reuse=reuse):
@@ -116,18 +118,18 @@ def reset_graph():
 
     self.sequence_lengths = LENGTH # assume every sample has same length.
     self.batch_z = tf.placeholder(dtype=tf.float32, shape=[self.hps.batch_size, self.hps.max_seq_len, WIDTH])
-    self.batch_action = tf.placeholder(dtype=tf.float32, shape=[self.hps.batch_size, self.hps.max_seq_len])
+    self.batch_action = tf.placeholder(dtype=tf.float32, shape=[self.hps.batch_size, self.hps.max_seq_len, self.hps.num_actions])
     self.batch_restart = tf.placeholder(dtype=tf.float32, shape=[self.hps.batch_size, self.hps.max_seq_len])
 
     self.input_z = self.batch_z[:, :LENGTH, :]
-    self.input_action = self.batch_action[:, :LENGTH]
+    self.input_action = self.batch_action[:, :LENGTH, :]
     self.input_restart = self.batch_restart[: , :LENGTH]
 
     self.target_z = self.batch_z[:, 1:, :]
     self.target_restart = self.batch_restart[: , 1:]
     
     self.input_seq = tf.concat([self.input_z,
-                                tf.reshape(self.input_action, [self.hps.batch_size, LENGTH, 1]),
+                                self.input_action,
                                 tf.reshape(self.input_restart, [self.hps.batch_size, LENGTH, 1])], axis=2)
 
     self.zero_state = cell.zero_state(batch_size=hps.batch_size, dtype=tf.float32)
