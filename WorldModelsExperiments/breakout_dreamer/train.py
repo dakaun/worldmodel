@@ -18,7 +18,7 @@ import json
 import os
 import subprocess
 import sys
-from model import make_model, simulate
+from dreamer_model import make_model, simulate
 from es import CMAES, SimpleGA, OpenES, PEPG
 import argparse
 import time

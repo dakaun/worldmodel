@@ -11,8 +11,8 @@ from gym.envs.atari.atari_env import AtariEnv
 from gym.spaces.box import Box
 from gym.utils import seeding
 from gym.envs.classic_control import rendering
-from WorldModelsExperiments.breakout_dreamer.dreamer_vae.dreamer_vae import ConvVAE
-from WorldModelsExperiments.breakout_dreamer.dreamer_rnn.dreamer_rnn import RNNModel, default_hps
+from dreamer_vae.dreamer_vae import ConvVAE
+from dreamer_rnn.dreamer_rnn import RNNModel, default_hps
 
 final_mode = True
 render_mode = True
@@ -38,7 +38,7 @@ class BreakoutWrapper(AtariEnv):
     metadata = {
         'render.modes':['human', 'rgb_array']
     }
-    def __init__(self, game_name, fullgame_name):
+    def __init__(self, game_name, fullgame_name, load_model=True, render_mode=False):
         frameskip = 1 if 'Frameskip' in fullgame_name else (2,5)
         game_name = game_name.lower()
         #super(BreakoutWrapper, self).__init__() # pong env, nicht breakout..
@@ -48,7 +48,6 @@ class BreakoutWrapper(AtariEnv):
 
         with open(os.path.join('tf_dreamerinitial_z', 'initial_z.json'), 'r') as f:
             [initial_mu, initial_logvar] = json.load(f)
-
         self.initial_mu_logvar = [list(elem) for elem in zip(initial_mu, initial_logvar)]
 
         self.vae = ConvVAE(batch_size=1, gpu_mode=False, is_training=False, reuse=True)
@@ -69,6 +68,7 @@ class BreakoutWrapper(AtariEnv):
         self.max_frame = 2100
 
         self.reset()
+        self.render_mode = render_mode
 
     def sample_init_z(self):
         idx = self.np_random.randint(0,len(self.initial_mu_logvar))
@@ -98,7 +98,7 @@ class BreakoutWrapper(AtariEnv):
     def _step(self, a):
         self.frame_count += 1
 
-        prev_z = self.zeros((1,1,64))
+        prev_z = np.zeros((1,1,64))
         prev_z[0][0] = self.z
         prev_action = np.zeros((1,1,4))
         prev_action[0][0] = a
@@ -187,25 +187,25 @@ class BreakoutWrapper(AtariEnv):
 
 
 
-def make_env(env_name, rep_act_prob=True):
+def make_env(env_name, rep_act_prob=True, load_model=True):
     game_version = 'v0' if rep_act_prob else 'v4'
     full_game_name = '{}-{}'.format(env_name, game_version)
-    env = BreakoutWrapper(env_name, full_game_name)
+    env = BreakoutWrapper(env_name, full_game_name, load_model)
     return env
 
 
-def make_model(load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json'):
+def make_model(load_model=True):
   # can be extended in the future.
-  model = Model(load_model=load_model, rnn_path=rnn_path, vae_path=vae_path)
+  model = Model(load_model=load_model)
   return model
 
 def softmax(x):
   return np.exp(x) / np.sum(np.exp(x), axis=0)
 
 class Model():
-    def __init__(self) :
+    def __init__(self, load_model=True) :
         self.env_name = 'Breakout'
-        self._make_env()
+        self._make_env(load_model)
 
         self.noise_level = 0.
         self.input_size = (64+512)# z + h = 64+512
@@ -223,8 +223,8 @@ class Model():
 
         self.render_mode = False
 
-    def _make_env(self):
-        self.env = make_env(self.env_name)
+    def _make_env(self, load_model):
+        self.env = make_env(self.env_name, load_model)
         np.random.seed(123)
         self.env.seed(123)
         self.num_actions = self.env.action_space.n
@@ -310,6 +310,16 @@ def simulate(model, train_mode=False, render_mode=True, num_episode=5, seed=-1, 
     return reward_list, t_list
 
 def main():
+    render_mode = True
+    use_model = True
+    file='log/breakout.cma.' #todo
+
+    model = make_model()
+    if use_model:
+        model.load_model(file)
+    else:
+        model.init_random_model_params(stdev=np.random.rand()*0.01)
+
     reward, steps_taken = simulate(model,
                                    train_mode=False, render_mode=render_mode, num_episode=1)
     print("terminal reward", reward, "average steps taken", np.mean(steps_taken) + 1)
