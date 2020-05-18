@@ -73,5 +73,7 @@ if __name__ == '__main__':
     with imageio.get_writer(filename, mode='I', macro_block_size=None) as video:
         for image in range(counter):
             video.append_data(obs[image])
+    # filename, mode='I', macro_block_size=None, format='FFMPEG'
+    #filename, mode='I', macro_block_size=None, format='FFMPEG', fps=1
 
     print('done')
