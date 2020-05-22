@@ -2,6 +2,7 @@
 *.mp4
 *.png
 *.webm
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
