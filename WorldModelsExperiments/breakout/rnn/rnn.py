@@ -59,8 +59,9 @@ hps_sample = hps_model._replace(batch_size=1, max_seq_len=1, use_recurrent_dropo
 
 # MDN-RNN model tailored for doomrnn
 class RNNModel():
-    def __init__(self, hps, gpu_mode=True, reuse=False):
+    def __init__(self, hps, env_name, gpu_mode=True, reuse=False):
         self.hps = hps
+        self.num_actions = 4 if 'Breakout' in env_name else 3
         with tf.variable_scope('mdn_rnn', reuse=reuse):
             if not gpu_mode:
                 with tf.device("/cpu:0"):
@@ -79,7 +80,7 @@ class RNNModel():
 
         self.num_mixture = hps.num_mixture
         KMIX = self.num_mixture  # 5 mixtures
-        INWIDTH = hps.encoded_img_width + hps.num_actions # 36 channels
+        INWIDTH = hps.encoded_img_width + self.num_actions # 36 channels
         OUTWIDTH = hps.encoded_img_width # 32 channels
         LENGTH = self.hps.max_seq_len # 230 timesteps
 
@@ -338,8 +339,11 @@ def rnn_init_state(rnn):
     return rnn.sess.run(rnn.initial_state)
 
 
-def rnn_next_state(rnn, z, a, prev_state):
-    input_x = np.concatenate((z.reshape((1, 1, 32)), a.reshape((1, 1, 4))), axis=2)
+def rnn_next_state(rnn, z, a, prev_state, env_name):
+    if 'Breakout' in env_name:
+        input_x = np.concatenate((z.reshape((1, 1, 32)), a.reshape((1, 1, 4))), axis=2)
+    elif 'CarRacing' in env_name:
+        input_x = np.concatenate((z.reshape((1, 1, 32)), a.reshape((1, 1, 3))), axis=2)
     feed = {rnn.input_x: input_x, rnn.initial_state: prev_state}
     return rnn.sess.run(rnn.final_state, feed)
 

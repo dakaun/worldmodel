@@ -27,9 +27,9 @@ def _process_frame(frame): # converts into (64,64,3)
   obs = obs / 255.
   return obs
 
-def make_model(load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json'):
+def make_model(env_name, load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json'):
   # can be extended in the future.
-  model = Model(load_model=load_model, rnn_path=rnn_path, vae_path=vae_path)
+  model = Model(env_name, load_model=load_model, rnn_path=rnn_path, vae_path=vae_path)
   return model
 
 def sigmoid(x):
@@ -47,17 +47,20 @@ def softmax(x):
 def sample(p):
   return np.argmax(np.random.multinomial(1, p))
 
+def clip(x, lo=0.0, hi=1.0):
+  return np.minimum(np.maximum(x,lo),hi)
+
 class Model():
   ''' simple feedforward model '''
-  def __init__(self, load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json'):
-    self.env_name = 'Breakout'
+  def __init__(self, env_name, load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json'):
+    self.env_name = env_name
     self._make_env()
 
     self.vae = ConvVAE(batch_size=1, gpu_mode=False, is_training=False, reuse=True)
 
-    hps_sample_dynamic = hps_sample._replace(num_actions=self.num_actions)
+    #hps_sample_dynamic = hps_sample._replace(num_actions=self.num_actions)
 
-    self.rnn = RNNModel(hps_sample, gpu_mode=False, reuse=True)
+    self.rnn = RNNModel(hps_sample, env_name, gpu_mode=False, reuse=True)
 
     if load_model:
       self.vae.load_json(vae_path)  # vae_path)
@@ -69,9 +72,16 @@ class Model():
     self.input_size = rnn_output_size()  # concatenate z,h - output of rnn (288)=z+ self.state.h[0]
     self.z_size = 32
 
-    self.weight = np.random.randn(self.input_size, self.env.action_space.n)
-    self.bias = np.random.randn(self.env.action_space.n)
-    self.param_count = (self.input_size)*self.env.action_space.n+self.env.action_space.n
+    if 'Breakout' in env_name:
+      self.num_actions = self.env.action_space.n
+      self.weight = np.random.randn(self.input_size, self.env.action_space.n)
+      self.bias = np.random.randn(self.env.action_space.n)
+      self.param_count = (self.input_size)*self.env.action_space.n+self.env.action_space.n
+    elif 'CarRacing' in env_name:
+      self.num_actions = self.env.action_space.shape[0]
+      self.weight = np.random.randn(self.input_size, 3)
+      self.bias = np.random.randn(3)
+      self.param_count = (self.input_size) * 3 + 3
 
     self.render_mode = False
 
@@ -85,7 +95,7 @@ class Model():
     self.env = make_env(self.env_name)
     np.random.seed(123)
     self.env.seed(123)
-    self.num_actions = self.env.action_space.n
+    #self.num_actions = self.env.action_space.n
     #self.render_mode = render_mode
     #self.env = make_env(self.env_name, seed=seed, render_mode=render_mode, load_model=load_model)
 
@@ -101,21 +111,31 @@ class Model():
     return z, mu, logvar
 
   def get_action(self, z):
-    h = rnn_output(self.state, z) #np.concatenate([z, state.h[0]])
-    # could probabilistically sample from softmax, but greedy
-    action = softmax(np.matmul(h, self.weight) + self.bias)
-    action = np.argmax(action)
-    #print("Action sampled from VAE:", action)
-    action_one_hot = np.zeros(self.num_actions)
-    action_one_hot[action] = 1
-    #print("Action hot:", action_one_hot)
-    self.state = rnn_next_state(self.rnn, z, action_one_hot, self.state)
-    return action_one_hot, action
+    h = rnn_output(self.state, z)  # np.concatenate([z, state.h[0]])
+    if 'Breakout' in self.env_name:
+      # could probabilistically sample from softmax, but greedy
+      action = softmax(np.matmul(h, self.weight) + self.bias)
+      action = np.argmax(action)
+      #print("Action sampled from VAE:", action)
+      action_one_hot = np.zeros(self.num_actions)
+      action_one_hot[action] = 1
+      #print("Action hot:", action_one_hot)
+      self.state = rnn_next_state(self.rnn, z, action_one_hot, self.state, self.env_name)
+      return action, action_one_hot
+    elif 'CarRacing' in self.env_name:
+      action = np.tanh(np.dot(h, self.weight)+ self.bias)
+      action[1] = (action[1]+1.0)/2.0
+      action[2] = clip(action[2])
+      self.state= rnn_next_state(self.rnn, z, action, self.state, self.env_name)
+      return action, ''
 
   def set_model_params(self, model_params):
-    # same as in carracing
+    if 'Breakout' in self.env_name:
       self.bias = np.array(model_params[:4])
       self.weight = np.array(model_params[4:]).reshape(self.input_size, 4)
+    elif 'CarRacing' in self.env_name:
+      self.bias = np.array(model_params[:3])
+      self.weight = np.array(model_params[3:]).reshape(self.input_size,3)
 
   def load_model(self, filename):
     with open(filename) as f:
@@ -162,7 +182,7 @@ def run_in_env(obs, model, treward, done=False):
     model.env.viewer.imshow(obs)
     obs = _process_frame(obs)
     z, mu, logvar = model.encode_obs(obs)
-    _, action = model.get_action(z)
+    action,_ = model.get_action(z)
     obs, reward, done, info = model.env.step(action)
     treward += reward
   return treward
@@ -193,7 +213,7 @@ def simulate(model, train_mode=False, render_mode=True, num_episode=5, seed=-1, 
     t=0
     total_reward = 0.0
     done = False
-    prev_info = {"ale.lives": model.env.ale.lives()}
+    #prev_info = {"ale.lives": model.env.ale.lives()}
 
     while not done:
       if render_mode:
@@ -205,19 +225,23 @@ def simulate(model, train_mode=False, render_mode=True, num_episode=5, seed=-1, 
         model.env.render('rgb_array')
       obs = _process_frame(obs)
       z, mu, logvar = model.encode_obs(obs)
-      _, action = model.get_action(z)
+      action,_ = model.get_action(z) #action_one_hot, action
       obs, reward, done, info = model.env.step(action)
 
-      if prev_info['ale.lives']>info['ale.lives']:
-        model.env.step(1)
+      # if prev_info['ale.lives']>info['ale.lives']:
+      #   model.env.step(1)
+
+      #todo carracing: penalize for turning to frequently ?
 
       prev_info = info
 
-      action_list.append(int(action))
+      action_list.append(action)
       observation_list.append(obs)
       #obs = _process_frame(obs)
       total_reward += reward
       t += 1
+      if t>1000:
+        break
 
 
       if done:
@@ -259,6 +283,7 @@ def main():
   use_model = False
 
   parser = argparse.ArgumentParser(description='Run Breakout with all given models')
+  # parser.add_argument('-n', '--ename', type=str, default='Breakout', help='Env Name')
   # parser.add_argument('-f', '--file', type=str, help='path to best json file') # file: log/carracing.cma.16.64.best.json
   # parser.add_argument('--vae', type=str, help='path to vae model')
   # parser.add_argument('--rnn', type=str, help='path to rnn model')
@@ -268,18 +293,18 @@ def main():
   # rnn_path = args.rnn
 
   render_mode = True  # args.render
+  env_name='CarRacing'
+  rnn_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/tf_rnn/rnn.json'
+  vae_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/tf_vae/vae.json'
 
-  rnn_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/tf_rnn/rnn.json'
-  vae_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/tf_vae/vae.json'
-
-  file = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/log/breakout.cma.16.32.best.json'
+  file = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/log/carracing.cma.16.64.best.json'
 
   if file: #args.file
     use_model = True
     filename = file
     print("filename", filename)
 
-  model = make_model(rnn_path=rnn_path, vae_path=vae_path)
+  model = make_model(env_name, rnn_path=rnn_path, vae_path=vae_path)
   print('model size', model.param_count)
 
   if (use_model):
