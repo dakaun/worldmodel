@@ -8,7 +8,8 @@ path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v
 rnn_path = path + '/tf_rnn/rnn.json'
 vae_path = path + '/tf_vae/vae.json'
 controller_path = path + '/log/breakout.cma.16.64.best.json'
-model = make_model(rnn_path=rnn_path, vae_path=vae_path)
+env_name='Breakout'
+model = make_model(env_name=env_name, rnn_path=rnn_path, vae_path=vae_path)
 model.load_model(controller_path)
 print('models loaded')
 
@@ -37,7 +38,7 @@ def play_game(model, num_episode=1, render_mode=True):
 
             obs = _process_frame(obs)
             z, mu, logvar = model.encode_obs(obs)
-            _, action = model.get_action(z)
+            action, _ = model.get_action(z)
             obs, reward, done, info = model.env.step(action)
 
             #data = np.concatenate([z, model.state.h[0]]).reshape(1, 288)
