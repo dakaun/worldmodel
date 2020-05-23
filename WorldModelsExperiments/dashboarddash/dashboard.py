@@ -1,27 +1,17 @@
 import dash
 import dash_html_components as html
+import dash_core_components as dcc
+from dash.dependencies import Input,Output
 import base64
 from PIL import Image
-from WorldModelsExperiments.breakout.model import Model, make_model, _process_frame
+from WorldModelsExperiments.breakout.model import make_model, _process_frame
 from WorldModelsExperiments.breakout.rnn.rnn import rnn_next_state
 import pandas as pd
 import numpy as np
 from pyglet.window import key
 import time
-import imageio
 import cv2
 import gym
-#import WorldModelsExperiments.dashboarddash.dash_player as dash_player
-
-
-path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200423'
-rnn_path = path + '/tf_rnn/rnn.json'
-vae_path = path + '/tf_vae/vae.json'
-controller_path = path + '/log/breakout.cma.16.64.best.json'
-
-model = make_model(rnn_path=rnn_path, vae_path=vae_path)
-model.load_model(controller_path)
-print('models loaded')
 
 
 def key_press(symbol, mod):
@@ -30,12 +20,14 @@ def key_press(symbol, mod):
         print('key pressed')
         human_sets_pause = not human_sets_pause
 
-
-def play_game(model, num_episode=1, render_mode=True):
+def play_game(env_name, model, num_episode=1, render_mode=True):
     global human_sets_pause
     human_sets_pause = False
     reward_list = []
-    obs_sequence = np.zeros(shape=(10000, 210, 160, 3), dtype=np.uint8)
+    if 'Breakout' in env_name:
+        obs_sequence = np.zeros(shape=(10000, 210, 160, 3), dtype=np.uint8)
+    elif 'CarRacing' in env_name:
+        obs_sequence = np.zeros(shape=(10000, 96, 96, 3), dtype=np.uint8)
     # tsne_data = pd.DataFrame()
 
     for episode in range(num_episode):
@@ -50,7 +42,7 @@ def play_game(model, num_episode=1, render_mode=True):
 
             obs = _process_frame(obs)
             z, mu, logvar = model.encode_obs(obs)
-            _, action = model.get_action(z)
+            action, _ = model.get_action(z)
             obs, reward, done, info = model.env.step(action)
 
             # data = np.concatenate([z, model.state.h[0]]).reshape(1, 288)
@@ -63,6 +55,10 @@ def play_game(model, num_episode=1, render_mode=True):
             if human_sets_pause:
                 time.sleep(1)
                 print('render for several steps done, shift with current reward: ', total_reward)
+                if 'Breakout' in env_name:
+                    model_state = model.env.clone_full_state()
+                else:
+                    model_state = None
                 time.sleep(2)
                 human_sets_pause = False
                 model.env.viewer.close()
@@ -79,9 +75,9 @@ def play_game(model, num_episode=1, render_mode=True):
                 print('close env')
             return obs_sequence, seq_counter
         time.sleep(2)
-    return obs_sequence, seq_counter, obs, model.state, total_reward, model.env.clone_full_state(),z
+    return model, obs_sequence, seq_counter, obs, model.state, total_reward, model_state, z
 
-def resume_game(pause_status, action):
+def resume_game(model, pause_status, action):
     obs_normal = np.zeros(shape=(3000, 210, 160, 3), dtype=np.uint8)
     obs_normal[:pause_status['counter']] = pause_status['sequence']
     seq_counter = pause_status['counter'] + 10 # todo add white pages instead of black - more obvious
@@ -98,14 +94,14 @@ def resume_game(pause_status, action):
             z = model.vae.encode(obs_into_z.reshape(1,64,64,3))
             action_one_hot = np.zeros(model.num_actions)
             action_one_hot[action]=1
-            model.state = rnn_next_state(model.rnn, z, action_one_hot, model.state)
+            model.state = rnn_next_state(model.rnn, z, action_one_hot, model.state, model.env_name)
 
     obs_normal[seq_counter,:,:,:]=obs
     seq_counter+=1
     while not done and seq_counter < 3000:
         obs = _process_frame(obs)
         z, mu, logvar = model.encode_obs(obs)
-        _, action = model.get_action(z)
+        action,_ = model.get_action(z)
         obs, reward, done, info = model.env.step(action)
         model.env.render('rgb_array')
 
@@ -121,52 +117,155 @@ def resume_game(pause_status, action):
 
 app = dash.Dash(__name__)
 server = app.server
+app.config['suppress_callback_exceptions'] = True
+#app.config.supress_callback_exceptions = True
 
 colors = {
     'background-color': 'LightGray'
 }
-
-app.layout = html.Div(id='header1',
+breakout = html.Div(id='header1',
                       style={
                           'textAlign': 'center',
                           'background-color': 'LightGray'
                       },
                       children=[
-                          html.H1(children='Breakout Word Model',
-                                  style={
-                                      'textAlign': 'center'
-                                  }),
-                          html.H3(children='Dashboard to display the world model of breakout.',
-                                  style={
-                                      'textAlign': 'center'
-                                  }),
-                          html.Div(id='subbodytest', children=[
+                          html.H1(children='Breakout Word Model'),
+                          html.H3(children='Dashboard to display the world model of breakout.'),
+                          html.Div(id='subbody', children=[
                               html.H5(['Press the Button to run Breakout.']),
                               html.Button('Start Breakout',
-                                      id='start_game',
+                                      id='start_gameb',
                                       n_clicks=0,
                                       style={
                                           'textAlign': 'center'
+
                                       }),
                           ]),
-                          html.Video(id='initial_game_video',
+                          html.Video(id='initial_game_videob',
                                      controls=True,
                                      style={
                                          'textAlign': 'center'
                                      },
-                                     height=252,
-                                     width=576
+                                     height=357,
+                                     width=816
                                      )
                       ])
+carracing = html.Div(id='header1',
+                      style={
+                          'textAlign': 'center',
+                          'background-color': 'LightGray'
+                      },
+                      children=[
+                          html.H1(children='CarRacing World Model'),
+                          html.H3(children='Dashboard to display word model of CarRacing.'),
+                          html.Div(id='subbody', children=[
+                              html.H5(['Press Button to run CarRacing.']),
+                              html.Button('Start CarRacing',
+                                          id='start_gamec',
+                                          n_clicks=0)
+                          ]),
+                          html.Video(id='initial_game_videoc',
+                                     controls=True,
+                                     style={
+                                         'textAlign': 'center'
+                                     },
+                                     height=357,
+                                     width=816
+                                     )
+                     ])
 
+overview = html.Div(id='header1',
+                    style={
+                          'textAlign': 'center',
+                          'background-color': 'LightGray'
+                      },
+                    children=[
+                        html.H1('Explanations of different World Model States'),
+                        html.H5(children='Choose either CarRacing or Breakout to display Page')
+                    ])
 
-@app.callback(dash.dependencies.Output('initial_game_video', 'src'),
-              [dash.dependencies.Input('start_game', 'n_clicks')])
-def start_game(buttonclick):
-    if buttonclick:
+app.layout = html.Div([
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content')
+])
+
+# todo below video display further information about each result
+# todo possible to refer back to frame number from video second - then ability to press button/input second of video to get more information about that gamestatus
+
+@app.callback(Output('page-content', 'children'),
+              [Input('url', 'pathname')])
+def display_page(pathname):
+    if pathname=='/':
+        return overview
+    elif pathname=='/breakout':
+        return breakout
+    elif pathname=='/carracing':
+        return carracing
+
+@app.callback(Output('initial_game_videoc', 'src'),
+              [Input('url', 'pathname'),
+               Input('start_gamec', 'n_clicks')])
+def start_carracinggame(page, buttonclick):
+    path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522'
+    rnn_path = path + '/tf_rnn/rnn.json'
+    vae_path = path + '/tf_vae/vae.json'
+    controller_path = path + '/log/carracing.cma.16.64.best.json'
+    env_name = 'CarRacing'
+    model = make_model(env_name=env_name, rnn_path=rnn_path, vae_path=vae_path)
+    model.load_model(controller_path)
+    print('Carracing models loaded')
+
+    if ('carracing' in page) and buttonclick:
         print('start playing game')
+        model, initial_obs_sequence, seq_counter, obs, state, treward, gamestate, z = play_game(env_name, model)
+        pause_status = {
+            'sequence': initial_obs_sequence[:seq_counter, :, :, :],
+            'counter': seq_counter,
+            'obs': obs,
+            'modelstate': state,
+            'totalreward': treward,
+            'gamestate': gamestate,
+            'z': z
+        }
+        # resume game from here:
+        # todo not able to save game state
+        init_obs_seq_filename = 'obs_video.webm'
 
-        initial_obs_sequence, seq_counter, obs, state, treward, gamestate, z = play_game(model)
+        height = initial_obs_sequence[0].shape[0]
+        width = initial_obs_sequence[0].shape[1]
+        sequence = initial_obs_sequence[:, :, :, [2, 1, 0]]
+
+        video = cv2.VideoWriter(init_obs_seq_filename, cv2.VideoWriter_fourcc(*'vp80'), 10, frameSize=(width, height))
+        for image in range(seq_counter):
+            video.write(sequence[image])
+        video.release()
+        print('done generating video')
+
+        videom = open(init_obs_seq_filename, 'rb').read()
+        encoded_video = base64.b64encode(videom).decode()
+        print('send video to dashboard')
+        return 'data:video/webm;base64,{}'.format(encoded_video)
+
+
+
+
+
+@app.callback(Output('initial_game_videob', 'src'),
+              [Input('url','pathname'),
+               Input('start_gameb', 'n_clicks')])
+def start_breakoutgame(page, buttonclick):
+    path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/retrain/'
+    rnn_path = path + '/tf_rnn/rnn.json'
+    vae_path = path + '/tf_vae/vae.json'
+    controller_path = path + '/log/breakout.cma.16.64.best.json'
+    env_name = 'Breakout'
+    model = make_model(env_name=env_name, rnn_path=rnn_path, vae_path=vae_path)
+    model.load_model(controller_path)
+    print('Breakout models loaded')
+
+    if ('breakout' in page) and buttonclick:
+        print('start playing game')
+        model, initial_obs_sequence, seq_counter, obs, state, treward, gamestate, z = play_game(env_name, model)
         pause_status = {
             'sequence': initial_obs_sequence[:seq_counter, :, :, :],
             'counter': seq_counter,
@@ -177,13 +276,13 @@ def start_game(buttonclick):
             'z': z
         }
         # normal
-        resume_obs_sequence_normal, seq_countern = resume_game(pause_status, 0)
+        resume_obs_sequence_normal, seq_countern = resume_game(model, pause_status, 0)
         print('normalgamedone')
         # right
-        resume_obs_sequence_right, seq_counterr = resume_game(pause_status, 2)
+        resume_obs_sequence_right, seq_counterr = resume_game(model, pause_status, 2)
         print('rightdone')
         # left
-        resume_obs_sequence_left, seq_counterl = resume_game(pause_status, 3)
+        resume_obs_sequence_left, seq_counterl = resume_game(model, pause_status, 3)
         print('leftdone')
         all_images = np.concatenate((resume_obs_sequence_left, resume_obs_sequence_normal, resume_obs_sequence_right),
                                     axis=2)
@@ -205,7 +304,6 @@ def start_game(buttonclick):
         videom = open(init_obs_seq_filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         print('send video to dashboard')
-        print('readytorender')
         return 'data:video/webm;base64,{}'.format(encoded_video)
 
 if __name__ == '__main__':
