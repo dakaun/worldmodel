@@ -4,6 +4,12 @@
 *.webm
 *.json
 
+WorldModelsExperiments/breakout/log/*
+WorldModelsExperiments/breakout/record/*
+WorldModelsExperiments/breakout/tf_rnn/*
+WorldModelsExperiments/breakout/tf_vae/*
+WorldModelsExperiments/breakout/tf_initial_z/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
