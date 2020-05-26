@@ -3,7 +3,6 @@ import random
 import json
 import sys
 import config
-import gym
 import time
 import argparse
 from WorldModelsExperiments.breakout.rnn.rnn import hps_sample, RNNModel, rnn_init_state, rnn_next_state, rnn_output, rnn_output_size
@@ -11,7 +10,6 @@ from WorldModelsExperiments.breakout.vae.vae import ConvVAE
 from WorldModelsExperiments.breakout.env import make_env
 from copy import deepcopy
 from PIL import Image
-from gym.envs.classic_control import rendering
 from pyglet.window import key
 import pyglet
 import multiprocessing
@@ -157,6 +155,14 @@ class Model():
     rnn_params = self.rnn.get_random_model_params(stdev=stdev)
     self.rnn.set_model_params(rnn_params)
 
+  def __deepcopy__(self):
+    return Model(deepcopy())
+  # https://stackoverflow.com/questions/50352273/how-to-exclude-specific-references-from-deepcopy
+  # https://stackoverflow.com/questions/23580974/copy-all-but-one-part-of-an-object-in-python
+  # https://stackoverflow.com/questions/4794244/how-can-i-create-a-copy-of-an-object-in-python
+  
+
+
 def evaluate(model):
   # run 100 times and average score, according to the reles.
   model.env.seed(0)
@@ -233,7 +239,7 @@ def simulate(model, train_mode=False, render_mode=True, num_episode=5, seed=-1, 
 
       #todo carracing: penalize for turning to frequently ?
 
-      prev_info = info
+      #prev_info = info
 
       action_list.append(action)
       observation_list.append(obs)

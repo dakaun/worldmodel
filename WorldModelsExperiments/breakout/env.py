@@ -1,9 +1,12 @@
-from gym.envs.atari.atari_env import AtariEnv
 import tensorflow as tf
+
+import sys
+sys.path.append('../../gym')
+import gym
 from gym.spaces.box import Box
 from gym.envs.classic_control import rendering
 from gym.envs.box2d.car_racing import CarRacing
-
+from gym.envs.atari.atari_env import AtariEnv
 
 def reset_graph():
     if 'sess' in globals() and sess:
@@ -38,3 +41,7 @@ def make_env(env_name, rep_act_prob=True, full_episode=False):
     elif 'CarRacing' in env_name:
         env = CarRacingWrapper(full_episode=full_episode)
         return env
+
+if __name__ == '__main__':
+    env = make_env('CarRacing')
+    print(env)
