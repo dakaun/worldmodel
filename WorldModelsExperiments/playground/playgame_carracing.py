@@ -3,6 +3,7 @@ from pyglet.window import key
 import time
 import numpy as np
 import imageio
+from copy import deepcopy
 
 path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522'
 rnn_path = path + '/tf_rnn/rnn.json'
@@ -46,13 +47,16 @@ def play_game(model, num_episode=1, render_mode=True):
             obs_sequence[seq_counter, :, :, :] = obs
             total_reward += reward
             seq_counter += 1
-            time.sleep(0.2)
+            #time.sleep(0.2)
 
             if human_sets_pause:
                 time.sleep(1)
                 print('render for several steps done, shift with current reward: ', total_reward)
                 time.sleep(2)
                 human_sets_pause = False
+                #pause_state_env = deepcopy(model.env)
+                print(action)
+
                 model.env.viewer.close()
                 model.env.viewer = None
                 print('close env')
@@ -68,6 +72,8 @@ def play_game(model, num_episode=1, render_mode=True):
             return obs_sequence, seq_counter
         time.sleep(2)
     return obs_sequence, seq_counter
+
+
 if __name__ == '__main__':
     obs, counter = play_game(model)
     filename = 'test.mp4'
