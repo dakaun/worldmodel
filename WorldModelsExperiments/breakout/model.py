@@ -25,9 +25,9 @@ def _process_frame(frame): # converts into (64,64,3)
   obs = obs / 255.
   return obs
 
-def make_model(env_name, load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json'):
+def make_model(env_name, load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json',kl_tolerance=0.5, z_size=32):
   # can be extended in the future.
-  model = Model(env_name, load_model=load_model, rnn_path=rnn_path, vae_path=vae_path)
+  model = Model(env_name, load_model=load_model, rnn_path=rnn_path, vae_path=vae_path, kl_tolerance=kl_tolerance,z_size=z_size)
   return model
 
 def sigmoid(x):
@@ -50,15 +50,15 @@ def clip(x, lo=0.0, hi=1.0):
 
 class Model():
   ''' simple feedforward model '''
-  def __init__(self, env_name, load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json'):
+  def __init__(self, env_name, load_model=True, rnn_path='tf_rnn/rnn.json', vae_path='tf_vae/vae.json', kl_tolerance=0.5, z_size=32):
     self.env_name = env_name
     self._make_env()
 
-    self.vae = ConvVAE(batch_size=1, gpu_mode=False, is_training=False, reuse=True)
+    self.vae = ConvVAE(batch_size=1, gpu_mode=False, is_training=False, reuse=True, kl_tolerance=kl_tolerance, z_size=z_size)
 
     #hps_sample_dynamic = hps_sample._replace(num_actions=self.num_actions)
 
-    self.rnn = RNNModel(hps_sample, env_name, gpu_mode=False, reuse=True)
+    self.rnn = RNNModel(hps_sample, env_name, gpu_mode=False, reuse=True, z_size=z_size)
 
     if load_model:
       self.vae.load_json(vae_path)  # vae_path)
@@ -67,8 +67,8 @@ class Model():
     self.state = rnn_init_state(self.rnn)
     self.rnn_mode = True
 
-    self.input_size = rnn_output_size()  # concatenate z,h - output of rnn (288)=z+ self.state.h[0]
-    self.z_size = 32
+    self.input_size = rnn_output_size(self.rnn)  # concatenate z,h - output of rnn (288)=z+ self.state.h[0]
+    self.z_size = z_size
 
     if 'Breakout' in env_name:
       self.num_actions = self.env.action_space.n

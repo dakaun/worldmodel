@@ -61,7 +61,7 @@ class ConvVAE(object):
                 self.r_loss = tf.reduce_sum(
                     tf.square(self.x - self.y),
                     reduction_indices=[1, 2, 3]
-                )
+                ) # logpx_z
                 self.r_loss = tf.reduce_mean(self.r_loss)
 
                 # augmented kl loss per dim
