@@ -20,13 +20,13 @@ def key_press(symbol, mod):
         print('key pressed')
         human_sets_pause = not human_sets_pause
 
-def play_game(env_name, model, num_episode=1, render_mode=True):
+def play_game(model, num_episode=1, render_mode=True):
     global human_sets_pause
     human_sets_pause = False
     reward_list = []
-    if 'Breakout' in env_name:
+    if 'Breakout' in model.env_name:
         obs_sequence = np.zeros(shape=(10000, 210, 160, 3), dtype=np.uint8)
-    elif 'CarRacing' in env_name:
+    elif 'CarRacing' in model.env_name:
         obs_sequence = np.zeros(shape=(10000, 96, 96, 3), dtype=np.uint8)
     # tsne_data = pd.DataFrame()
 
@@ -50,12 +50,12 @@ def play_game(env_name, model, num_episode=1, render_mode=True):
             obs_sequence[seq_counter, :, :, :] = obs
             total_reward += reward
             seq_counter += 1
-            time.sleep(0.2)
+            time.sleep(0.1)
 
             if human_sets_pause:
                 time.sleep(1)
                 print('render for several steps done, shift with current reward: ', total_reward)
-                if 'Breakout' in env_name:
+                if 'Breakout' in model.env_name:
                     model_state = model.env.clone_full_state()
                 else:
                     model_state = None
@@ -75,39 +75,69 @@ def play_game(env_name, model, num_episode=1, render_mode=True):
                 print('close env')
             return obs_sequence, seq_counter
         time.sleep(2)
-    return model, obs_sequence, seq_counter, obs, model.state, total_reward, model_state, z
+    return model, obs_sequence, seq_counter, obs, total_reward, model_state, z
 
 def resume_game(model, pause_status, action):
-    obs_normal = np.zeros(shape=(3000, 210, 160, 3), dtype=np.uint8)
+    if 'Breakout' in model.env_name:
+        obs_normal = np.zeros(shape=(10000, 210, 160, 3), dtype=np.uint8)
+    elif 'CarRacing' in model.env_name:
+        obs_normal = np.zeros(shape=(10000, 96, 96, 3), dtype=np.uint8)
     obs_normal[:pause_status['counter']] = pause_status['sequence']
     seq_counter = pause_status['counter'] + 10 # todo add white pages instead of black - more obvious
     total_reward = pause_status['totalreward']
     obs = pause_status['obs']
     model.state = pause_status['modelstate']
-    model.env.restore_full_state(pause_status['gamestate'])
+
+    if model.env_name=='Breakout':
+        model.env.restore_full_state(pause_status['gamestate'])
+    elif model.env_name=='CarRacing':
+        model.env.car = pause_status['car']
+        model.env.prev_reward = pause_status['prev_reward']
+        model.env.reward = pause_status['reward']
+        model.env.road = pause_status['road']
+        model.env.road_poly = pause_status['road_poly']
+        model.env.score_label = pause_status['score_label']
+        model.env.start_alpha = pause_status['start_alpha']
+        model.env.state = pause_status['env_state']
+        model.env.t = pause_status['t']
+        model.env.tile_visited_count = pause_status['tile_visited_count']
+        model.env.track = pause_status['track']
+
     done = False
 
-    if action==2 | action==3:
+    if model.env_name== 'Breakout':
+        if action==2 | action==3:
+            for i in range(1):
+                obs, _, _, _= model.env.step(action)
+                model.env.render('rgb_array')
+                obs_into_z= _process_frame(obs)
+                z = model.vae.encode(obs_into_z.reshape(1,64,64,3))
+                action_one_hot = np.zeros(model.num_actions)
+                action_one_hot[action]=1
+                model.state = rnn_next_state(model.rnn, z, action_one_hot, model.state, model.env_name)
+    elif model.env_name=='CarRacing':
         for i in range(1):
-            obs, _,_,_= model.env.step(action)
-            obs_into_z= _process_frame(obs)
-            z = model.vae.encode(obs_into_z.reshape(1,64,64,3))
-            action_one_hot = np.zeros(model.num_actions)
-            action_one_hot[action]=1
-            model.state = rnn_next_state(model.rnn, z, action_one_hot, model.state, model.env_name)
+            obs, _, _, _=model.env.step(action)
+            model.env.render('rgb_array')
+            obs_into_z = _process_frame(obs)
+            z = model.vae.encode(obs_into_z.reshape(1, 64, 64, 3))
+            model.state = rnn_next_state(model.rnn, z, action, model.state, model.env_name)
 
     obs_normal[seq_counter,:,:,:]=obs
     seq_counter+=1
-    while not done and seq_counter < 3000:
+    resume_counter=0
+    while not done and resume_counter < 80:
+        model.env.render('rgb_array')
         obs = _process_frame(obs)
         z, mu, logvar = model.encode_obs(obs)
         action,_ = model.get_action(z)
         obs, reward, done, info = model.env.step(action)
-        model.env.render('rgb_array')
+        #model.env.render('rgb_array')
 
         obs_normal[seq_counter, :, :, :] = obs
         total_reward += reward
         seq_counter += 1
+        resume_counter +=1
 
     print('Episode is done with total reward: ', total_reward)
     #model.env.viewer.close()
@@ -181,7 +211,7 @@ overview = html.Div(id='header1',
                       },
                     children=[
                         html.H1('Explanations of different World Model States'),
-                        html.H5(children='Choose either CarRacing or Breakout to display Page')
+                        html.H3(children='Choose either CarRacing or Breakout to display Page')
                     ])
 
 app.layout = html.Div([
@@ -217,26 +247,48 @@ def start_carracinggame(page, buttonclick):
 
     if ('carracing' in page) and buttonclick:
         print('start playing game')
-        model, initial_obs_sequence, seq_counter, obs, state, treward, gamestate, z = play_game(env_name, model)
+        model, initial_obs_sequence, seq_counter, obs, treward, gamestate, z = play_game(model)
         pause_status = {
             'sequence': initial_obs_sequence[:seq_counter, :, :, :],
             'counter': seq_counter,
             'obs': obs,
-            'modelstate': state,
+            'modelstate': model.state,
             'totalreward': treward,
             'gamestate': gamestate,
-            'z': z
-        }
-        # resume game from here:
-        # todo not able to save game state
-        init_obs_seq_filename = 'obs_video.webm'
+            'car': model.env.car,
+            'prev_reward': model.env.prev_reward,
+            'reward': model.env.reward,
+            'road': model.env.road,
+            'road_poly': model.env.road_poly,
+            'score_label': model.env.score_label,
+            'start_alpha': model.env.start_alpha,
+            'env_state': model.env.state,
+            't': model.env.t,
+            'tile_visited_count': model.env.tile_visited_count,
+            'track': model.env.track
 
-        height = initial_obs_sequence[0].shape[0]
-        width = initial_obs_sequence[0].shape[1]
-        sequence = initial_obs_sequence[:, :, :, [2, 1, 0]]
+        }
+        # normal
+        resume_obs_sequence_normal, seq_countern = resume_game(model, pause_status, np.array([0.,0.,0.]))
+        print('normalgamedone')
+        # right
+        resume_obs_sequence_right, seq_counterr = resume_game(model, pause_status, np.array([0.5,0.,0.]))
+        print('rightdone')
+        # left
+        resume_obs_sequence_left, seq_counterl = resume_game(model, pause_status, np.array([-0.5,0.,0.]))
+        print('leftdone')
+        all_images = np.concatenate((resume_obs_sequence_left, resume_obs_sequence_normal, resume_obs_sequence_right),
+                                    axis=2)
+        fin_counter = max(seq_counterl, seq_countern, seq_counterr)
+        init_obs_seq_filename = 'obs_video_carracing.webm'
+        height = all_images[0].shape[0]
+        width = all_images[0].shape[1]
+        sequence = all_images[:, :, :, [2, 1, 0]]
+        print(height)
+        print(width)
 
         video = cv2.VideoWriter(init_obs_seq_filename, cv2.VideoWriter_fourcc(*'vp80'), 10, frameSize=(width, height))
-        for image in range(seq_counter):
+        for image in range(fin_counter):
             video.write(sequence[image])
         video.release()
         print('done generating video')
@@ -245,10 +297,6 @@ def start_carracinggame(page, buttonclick):
         encoded_video = base64.b64encode(videom).decode()
         print('send video to dashboard')
         return 'data:video/webm;base64,{}'.format(encoded_video)
-
-
-
-
 
 @app.callback(Output('initial_game_videob', 'src'),
               [Input('url','pathname'),
@@ -265,15 +313,14 @@ def start_breakoutgame(page, buttonclick):
 
     if ('breakout' in page) and buttonclick:
         print('start playing game')
-        model, initial_obs_sequence, seq_counter, obs, state, treward, gamestate, z = play_game(env_name, model)
+        model, initial_obs_sequence, seq_counter, obs, treward, gamestate, z = play_game(model)
         pause_status = {
             'sequence': initial_obs_sequence[:seq_counter, :, :, :],
             'counter': seq_counter,
             'obs': obs,
-            'modelstate': state,
+            'modelstate': model.state,
             'totalreward': treward,
-            'gamestate': gamestate,
-            'z': z
+            'gamestate': gamestate
         }
         # normal
         resume_obs_sequence_normal, seq_countern = resume_game(model, pause_status, 0)
@@ -289,11 +336,13 @@ def start_breakoutgame(page, buttonclick):
         print(all_images.shape)
 
         fin_counter = max(seq_counterl, seq_countern, seq_counterr)
-        init_obs_seq_filename = 'obs_video.webm'
+        init_obs_seq_filename = 'obs_video_breakout.webm'
 
         height = all_images[0].shape[0]
         width = all_images[0].shape[1]
         sequence = all_images[:, :, :, [2, 1, 0]]
+        print(height)
+        print(width)
 
         video = cv2.VideoWriter(init_obs_seq_filename, cv2.VideoWriter_fourcc(*'vp80'), 10, frameSize=(width, height))
         for image in range(fin_counter):
@@ -307,4 +356,4 @@ def start_breakoutgame(page, buttonclick):
         return 'data:video/webm;base64,{}'.format(encoded_video)
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=1873)
+    app.run_server(debug=True, host='0.0.0.0', port=1872)
