@@ -165,7 +165,7 @@ def decode_solution_packet(packet):
   packets = np.split(packet, num_worker_trial)
   result = []
   for p in packets:
-    result.append([p[0], p[1], p[2], p[3], p[4], p[5:].astype(np.float)/PRECISION])
+    result.append([p[0], p[1], p[2], p[3], p[4], p[5:].astype(np.float)/PRECISION]) # worker_id, jobidx, seed, train_mode, max_len, weights
   return result
 
 def encode_result_packet(results):
@@ -218,7 +218,7 @@ def slave():
       seed = int(seed)
       fitness, timesteps = worker(weights, seed, train_mode, max_len)
       results.append([worker_id, jobidx, fitness, timesteps])
-    result_packet = encode_result_packet(results)
+    result_packet = encode_result_packet(results) # flat np.array(worker_id, jobidx, fitness, timesteps, worker_id, ..); len: 4*num_worker_trial
     assert len(result_packet) == RESULT_PACKET_SIZE
     comm.Send(result_packet, dest=0)
 
@@ -231,14 +231,14 @@ def send_packets_to_slaves(packet_list):
     comm.Send(packet, dest=i)
 
 def receive_packets_from_slaves():
-  result_packet = np.empty(RESULT_PACKET_SIZE, dtype=np.int32)
+  result_packet = np.empty(RESULT_PACKET_SIZE, dtype=np.int32) # flat np.array(worker_id, jobidx, fitness, timesteps, worker_id, ..); len: 4*num_worker_trial
 
   reward_list_total = np.zeros((population, 2))
 
   check_results = np.ones(population, dtype=np.int)
   for i in range(1, num_worker+1):
     comm.Recv(result_packet, source=i)
-    results = decode_result_packet(result_packet)
+    results = decode_result_packet(result_packet) # list: len num_work_trial
     for result in results:
       worker_id = int(result[0])
       possible_error = "work_id = " + str(worker_id) + " source = " + str(i)
