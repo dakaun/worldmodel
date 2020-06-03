@@ -229,7 +229,7 @@ def simulate(model, train_mode=False, render_mode=True, num_episode=5, seed=-1, 
           time.sleep(0.01)
       else:
         model.env.render('rgb_array')
-      obs = _process_frame(obs)
+      #obs = _process_frame(obs)
       z, mu, logvar = model.encode_obs(obs)
       action,_ = model.get_action(z) #action_one_hot, action
       obs, reward, done, info = model.env.step(action)
@@ -299,11 +299,15 @@ def main():
   # rnn_path = args.rnn
 
   render_mode = True  # args.render
-  env_name='CarRacing'
-  rnn_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/tf_rnn/rnn.json'
-  vae_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/tf_vae/vae.json'
-
-  file = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/log/carracing.cma.16.64.best.json'
+  env_name='Breakout'
+  if env_name=='CarRacing':
+    rnn_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/tf_rnn/rnn.json'
+    vae_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/tf_vae/vae.json'
+    file = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522/log/carracing.cma.16.64.best.json'
+  elif env_name == 'Breakout':
+    rnn_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200423/tf_rnn/rnn.json'
+    vae_path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200423/tf_vae/vae.json'
+    file = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200423/log/breakout.cma.16.64.best.json'
 
   if file: #args.file
     use_model = True
