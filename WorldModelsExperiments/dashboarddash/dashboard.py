@@ -27,7 +27,7 @@ def play_game(model, num_episode=1, render_mode=True):
     if 'Breakout' in model.env_name:
         obs_sequence = np.zeros(shape=(10000, 210, 160, 3), dtype=np.uint8)
     elif 'CarRacing' in model.env_name:
-        obs_sequence = np.zeros(shape=(10000, 96, 96, 3), dtype=np.uint8)
+        obs_sequence = np.zeros(shape=(10000, 288, 288, 3), dtype=np.uint8)
     # tsne_data = pd.DataFrame()
 
     for episode in range(num_episode):
@@ -81,7 +81,7 @@ def resume_game(model, pause_status, action):
     if 'Breakout' in model.env_name:
         obs_normal = np.zeros(shape=(10000, 210, 160, 3), dtype=np.uint8)
     elif 'CarRacing' in model.env_name:
-        obs_normal = np.zeros(shape=(10000, 96, 96, 3), dtype=np.uint8)
+        obs_normal = np.zeros(shape=(10000, 288, 288, 3), dtype=np.uint8)
     obs_normal[:pause_status['counter']] = pause_status['sequence']
     seq_counter = pause_status['counter'] + 10 # todo add white pages instead of black - more obvious
     total_reward = pause_status['totalreward']
@@ -284,8 +284,6 @@ def start_carracinggame(page, buttonclick):
         height = all_images[0].shape[0]
         width = all_images[0].shape[1]
         sequence = all_images[:, :, :, [2, 1, 0]]
-        print(height)
-        print(width)
 
         video = cv2.VideoWriter(init_obs_seq_filename, cv2.VideoWriter_fourcc(*'vp80'), 10, frameSize=(width, height))
         for image in range(fin_counter):
