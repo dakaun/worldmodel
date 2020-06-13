@@ -39,6 +39,7 @@ class FlatBatchEnv(Env):
     self.observation_space = self.batch_env.observation_space
 
   def step(self, action):
+    #print('FlatBatchEnv.step: ', action)
     obs, rewards, dones = self.batch_env.step([action])
     return obs[0], rewards[0], dones[0], {}
 
@@ -95,6 +96,7 @@ class SimulatedBatchGymEnv(Env):
     obs, rewards, dones = self._sess.run(
         [self._obs_t, self._rewards_t, self._dones_t],
         feed_dict={self._actions_t: actions})
+    #print('SimulatedBatchGymEnv.step: ', obs.shape)
     return obs, rewards, dones
 
   def close(self):

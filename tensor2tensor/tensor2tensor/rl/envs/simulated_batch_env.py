@@ -123,6 +123,7 @@ class SimulatedBatchEnv(in_graph_batch_env.InGraphBatchEnv):
     self._episode_counter = tf.get_variable(
         "episode_counter", initializer=tf.zeros((), dtype=tf.int32),
         trainable=False, dtype=tf.int32)
+    #self._video_writer = None
     if sim_video_dir:
       self._video_every_epochs = 100
       self._video_dir = sim_video_dir
@@ -294,6 +295,9 @@ class SimulatedBatchEnv(in_graph_batch_env.InGraphBatchEnv):
       self._video_writer.finish_to_disk()
     self._video_writer = None
 
-  def __del__(self):
-    self._video_reset_writer()
-    super(SimulatedBatchEnv, self).__del__()
+  def close(self):
+      self._video_reset_writer()
+
+  # def __del__(self):
+  #   self._video_reset_writer()
+  #   super(SimulatedBatchEnv, self).__del__()

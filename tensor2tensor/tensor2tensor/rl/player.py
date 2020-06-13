@@ -73,15 +73,14 @@ from tensor2tensor.utils import registry
 
 import tensorflow as tf
 
-
 flags = tf.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("video_dir", "/tmp/gym-results",
+flags.DEFINE_string("video_dir", "../../../WorldModelsExperiments/dashboarddash/gym-results",
                     "Where to save played trajectories.")
-flags.DEFINE_float("zoom", 4.,
+flags.DEFINE_float("zoom", 3,
                    "Resize factor of displayed game.")
-flags.DEFINE_float("fps", 20.,
+flags.DEFINE_float("fps", 30,
                    "Frames per second.")
 flags.DEFINE_string("epoch", "last",
                     "Data from which epoch to use.")
@@ -94,7 +93,7 @@ flags.DEFINE_boolean("dry_run", False,
                      "some random actions on environment")
 flags.DEFINE_string("model_ckpt", "",
                     "World model checkpoint path.")
-flags.DEFINE_string("wm_dir", "",
+flags.DEFINE_string("wm_dir", "/home/student/t2t_train/mb_sd_pong_pretrained/world_model",
                     "Directory with world model checkpoints. Inferred from "
                     "output_dir if empty.")
 flags.DEFINE_string("policy_dir", "",
@@ -102,7 +101,7 @@ flags.DEFINE_string("policy_dir", "",
 flags.DEFINE_string("episodes_data_dir", "",
                     "Path to data for simulated environment initialization. "
                     "Inferred from output_dir if empty.")
-flags.DEFINE_boolean("game_from_filenames", True,
+flags.DEFINE_boolean("game_from_filenames", False,
                      "If infer game name from data_dir filenames or from "
                      "hparams.")
 
@@ -170,6 +169,7 @@ class PlayerEnv(gym.Env):
       }
     """
     # Based on gym AtariEnv.get_keys_to_action()
+    #print('PlayerEnv.get_keys_to_action:here')
     keyword_to_key = {
         "UP": ord("w"),
         "DOWN": ord("s"),
@@ -192,6 +192,7 @@ class PlayerEnv(gym.Env):
     keys_to_action[(ord("c"),)] = self.TOGGLE_WAIT_ACTION
     keys_to_action[(ord("n"),)] = self.WAIT_MODE_NOOP_ACTION
 
+    #print('PlayerEnv.get_keys_to_action: ', keys_to_action)
     return keys_to_action
 
   def _player_actions(self):
@@ -221,6 +222,8 @@ class PlayerEnv(gym.Env):
       self._update_statistics(envs_step_tuples)
 
     self._last_step_tuples = envs_step_tuples
+    #print('PlayerEnv.step(): ', envs_step_tuples)
+    #print('PlayerEnv.step(): ', envs_step_tuples)
     ob, reward, done, info = self._player_step_tuple(envs_step_tuples)
     return ob, reward, done, info
 
@@ -248,7 +251,7 @@ class PlayerEnv(gym.Env):
     )
     header = np.asarray(img)
     del img
-    header.setflags(write=1)
+    header.setflags(write=1) #ValueError: cannot set WRITEABLE flag to True of this array
     # Top row color indicates if WAIT MODE is on.
     if self._wait:
       pixel_fill = (0, 255, 0)
@@ -342,6 +345,7 @@ class SimAndRealEnvPlayer(PlayerEnv):
     return actions
 
   def get_keys_to_action(self):
+    #print('SimAndRealEnvPlayer.get_keys_to_action:here')
     keys_to_action = super(SimAndRealEnvPlayer, self).get_keys_to_action()
     keys_to_action[(ord("x"),)] = self.RESTART_SIMULATED_ENV_ACTION
     return keys_to_action
@@ -403,6 +407,8 @@ class SimAndRealEnvPlayer(PlayerEnv):
 
   def _step_envs(self, action):
     """Perform step(action) on environments and update initial_frame_stack."""
+    print('SimAndRealEnvPlayer._step_envs) ', action)
+
     self._frame_counter += 1
     real_env_step_tuple = self.real_env.step(action)
     sim_env_step_tuple = self.sim_env.step(action)
@@ -480,6 +486,7 @@ class SingleEnvPlayer(PlayerEnv):
 
 
 def main(_):
+  print('Reached point here')
   # gym.logger.set_level(gym.logger.DEBUG)
   hparams = registry.hparams(FLAGS.loop_hparams_set)
   hparams.parse(FLAGS.loop_hparams)
@@ -538,8 +545,11 @@ def main(_):
     return
 
   play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
+  env.close()
+  print('env closed')
 
 
 if __name__ == "__main__":
+  print('Reached main')
   tf.logging.set_verbosity(tf.logging.INFO)
   tf.app.run()

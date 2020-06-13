@@ -60,7 +60,7 @@ flags.DEFINE_string(
     "eval_metrics_dir", "", "Directory to output the eval metrics at."
 )
 flags.DEFINE_integer("eval_batch_size", 1, "Number of games to evaluate.")
-flags.DEFINE_integer("eval_step_limit", 50000,
+flags.DEFINE_integer("eval_step_limit", 50,#50000,
                      "Maximum number of time steps, ignored if -1.")
 flags.DEFINE_enum(
     "agent", "policy", ["random", "policy", "planner"], "Agent type to use."
@@ -71,7 +71,7 @@ flags.DEFINE_enum(
 # T2TEnv to a wrapper storing rollouts and providing Problem interface for any
 # batch env.
 flags.DEFINE_enum(
-    "mode", "agent_real", ["agent_real", "agent_simulated", "model"],
+    "mode", "agent_simulated", ["agent_real", "agent_simulated", "model"],
     "Evaluation mode; report agent's score on real or simulated env, or model's"
     " reward accuracy."
 )
@@ -90,13 +90,13 @@ flags.DEFINE_integer(
     "log_every_steps", 5, "Log every how many environment steps."
 )
 flags.DEFINE_string(
-    "debug_video_path", "", "Path to save the debug video at."
+    "debug_video_path", "pong_pretrained", "Path to save the debug video at."
 )
 flags.DEFINE_integer(
-    "num_debug_videos", 1, "Number of debug videos to generate."
+    "num_debug_videos", 2, "Number of debug videos to generate."
 )
 flags.DEFINE_integer(
-    "random_starts_step_limit", 10000,
+    "random_starts_step_limit", 50,#10000,
     "Number of frames to choose from for random starts of the simulated env."
 )
 

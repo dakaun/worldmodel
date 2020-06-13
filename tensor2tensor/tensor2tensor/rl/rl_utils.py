@@ -458,7 +458,6 @@ def run_rollouts(
       act_kwargs["env_state"] = env.state
     actions = agent.act(observations, **act_kwargs)
     (observations, rewards, dones) = env.step(actions)
-    env.render('human') # BatchStackWrapper has no attribute 'render'
     observations = list(observations)
     now_done_indices = []
     for (i, done) in enumerate(dones):
