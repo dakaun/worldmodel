@@ -12,7 +12,12 @@ from pyglet.window import key
 import time
 import cv2
 import gym
+import os
 
+import sys
+sys.path.append('../../tensor2tensor')
+import tensor2tensor
+import runpy
 
 def key_press(symbol, mod):
     global human_sets_pause
@@ -204,6 +209,27 @@ carracing = html.Div(id='header1',
                                      )
                      ])
 
+pong = html.Div(id='header1',
+                style={
+                    'textAlign': 'center',
+                    'background-color': 'LightGray'
+                },
+                children=[
+                    html.H1(children='Pong World Model'),
+                    html.H3(children='Dashboard to display word model of Pong.'),
+                    html.Div(id='subbody', children=[
+                              html.H5(['Press Button to run Pong.']),
+                              html.Button('Start Pong',
+                                          id='start_gamep',
+                                          n_clicks=0)
+                          ]),
+                          html.Video(id='initial_game_videop',
+                                     controls=True,
+                                     style={
+                                         'textAlign': 'center'
+                                     })
+                ])
+
 overview = html.Div(id='header1',
                     style={
                           'textAlign': 'center',
@@ -231,11 +257,35 @@ def display_page(pathname):
         return breakout
     elif pathname=='/carracing':
         return carracing
+    elif pathname=='/pong':
+        return pong
 
+@app.callback(Output('initial_game_videop', 'src'),
+              [Input('url', 'pathname'),
+               Input('start_gamep', 'n_clicks')])
+def pong_playgame_showframes(page, buttonclick):
+    if ('pong' in page) and buttonclick:
+        print('start playing game')
+        os.system('python ../../tensor2tensor/tensor2tensor/rl/player.py')
+        #runpy._run_module_as_main('tensor2tensor.rl.player')
+        print('game played')
+        filename =[]
+        print('list files in dir')
+        for file in os.listdir('gym-results'):
+            print(file)
+            if file.endswith('.mp4'):
+                filename.append(file)
+        print('open video file')
+        videom = open(filename[0], 'rb').read()
+        encoded_video = base64.b64encode(videom).decode()
+        print('send video to dashboard')
+        return 'data:video/mp4;base64,{}'.format(encoded_video)
+
+#4.75 , 6.09
 @app.callback(Output('initial_game_videoc', 'src'),
               [Input('url', 'pathname'),
                Input('start_gamec', 'n_clicks')])
-def start_carracinggame(page, buttonclick):
+def carracing_startgame_showframes(page, buttonclick):
     path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522'
     rnn_path = path + '/tf_rnn/rnn.json'
     vae_path = path + '/tf_vae/vae.json'
@@ -299,7 +349,7 @@ def start_carracinggame(page, buttonclick):
 @app.callback(Output('initial_game_videob', 'src'),
               [Input('url','pathname'),
                Input('start_gameb', 'n_clicks')])
-def start_breakoutgame(page, buttonclick):
+def breakout_startgame_showframes(page, buttonclick):
     path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/retrain/'
     rnn_path = path + '/tf_rnn/rnn.json'
     vae_path = path + '/tf_vae/vae.json'
