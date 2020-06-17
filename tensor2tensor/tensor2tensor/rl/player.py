@@ -59,6 +59,11 @@ import numpy as np
 import sys
 sys.path.append('../../../tensor2tensor')
 import tensor2tensor
+import pygame
+import time
+#from tensor2tensor.rl.evaluator import make_agent_from_hparams
+#from tensor2tensor.rl import rl_utils
+
 
 from tensor2tensor.bin import t2t_trainer  # pylint: disable=unused-import
 from tensor2tensor.rl import player_utils
@@ -84,7 +89,7 @@ flags.DEFINE_float("fps", 30,
                    "Frames per second.")
 flags.DEFINE_string("epoch", "last",
                     "Data from which epoch to use.")
-flags.DEFINE_boolean("sim_and_real", True,
+flags.DEFINE_boolean("sim_and_real", False,
                      "Compare simulated and real environment.")
 flags.DEFINE_boolean("simulated_env", True,
                      "Either to use 'simulated' or 'real' env.")
@@ -484,6 +489,12 @@ class SingleEnvPlayer(PlayerEnv):
     ob = np.zeros(self.env.observation_space.shape, dtype=np.uint8)
     return self._pack_step_tuples((ob, 0, True, {}))
 
+def display_arr(screen, arr, video_size, transpose):
+    arr_min, arr_max = arr.min(), arr.max()
+    arr = 255.0 * (arr - arr_min) / (arr_max - arr_min)
+    pyg_img = pygame.surfarray.make_surface(arr.swapaxes(0, 1) if transpose else arr)
+    pyg_img = pygame.transform.scale(pyg_img, video_size)
+    screen.blit(pyg_img, (0,0))
 
 def main(_):
   print('Reached point here')
@@ -536,11 +547,34 @@ def main(_):
   env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
 
   if FLAGS.dry_run:
+    # build agent
+    #stacked_env = rl_utils.BatchStackWrapper(env, stack_size=4)
+    #eval_hparams = trainer_lib.create_hparams(hparams.b)
+    #agent = make_agent_from_hparams(agent_type='policy', base_env=env, stacked_env=stacked_env, loop_hparams=FLAGS.loop_hparams,
+    #                                policy_hparams=eval_hparams, planner_hparams="", model_dir="", policy_dir="agent_model_dir", sampling_temp="5", video_writers=())
+    #agent_type, base_env, env, loop_hparams, policy_hparams, planner_hparams, model_dir, policy_dir, sampling_temp, video_writers
+    #
+
+
     env.unwrapped.get_keys_to_action()
-    for _ in range(5):
+    env.reset()
+    rendered = env.render(mode = 'rgb_array')
+
+    video_size = [rendered.shape[1],rendered.shape[0]]
+    zoom = 3
+    video_size = int(video_size[0] * zoom), int(video_size[1] * zoom)
+    screen = pygame.display.set_mode(video_size)
+
+    for _ in range(1):
       env.reset()
       for i in range(50):
-        env.step(i % 3)
+        # observations: 4 stacked observations, shape: (1,4,105,80,3)
+        #actions = agent.act(observations, {})
+        obs, rew, env_done, info = env.step(i % 6)
+        rendered = env.render(mode='rgb_array')
+        display_arr(screen, rendered, transpose=True, video_size=video_size)
+        time.sleep(0.5)
+        pygame.display.flip()
       env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
     return
 
@@ -550,6 +584,5 @@ def main(_):
 
 
 if __name__ == "__main__":
-  print('Reached main')
   tf.logging.set_verbosity(tf.logging.INFO)
   tf.app.run()
