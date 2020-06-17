@@ -17,6 +17,7 @@ import os
 import sys
 sys.path.append('../../tensor2tensor')
 import tensor2tensor
+from tensor2tensor.rl import player
 import runpy
 
 def key_press(symbol, mod):
@@ -227,7 +228,9 @@ pong = html.Div(id='header1',
                                      controls=True,
                                      style={
                                          'textAlign': 'center'
-                                     })
+                                     },
+                                     height=396,
+                                     width=720)
                 ])
 
 overview = html.Div(id='header1',
@@ -266,17 +269,18 @@ def display_page(pathname):
 def pong_playgame_showframes(page, buttonclick):
     if ('pong' in page) and buttonclick:
         print('start playing game')
-        os.system('python ../../tensor2tensor/tensor2tensor/rl/player.py')
-        #runpy._run_module_as_main('tensor2tensor.rl.player')
+        player.main('')
         print('game played')
         filename =[]
         print('list files in dir')
-        for file in os.listdir('gym-results'):
+        filelist = os.listdir('gym-results')
+        filelist.sort()
+        for file in filelist:
             print(file)
-            if file.endswith('.mp4'):
-                filename.append(file)
+            if file.endswith('.mp4'): filename.append(file)
         print('open video file')
-        videom = open(filename[0], 'rb').read()
+        print(filename[1])
+        videom = open('gym-results/' + filename[1], 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         print('send video to dashboard')
         return 'data:video/mp4;base64,{}'.format(encoded_video)
@@ -404,4 +408,4 @@ def breakout_startgame_showframes(page, buttonclick):
         return 'data:video/webm;base64,{}'.format(encoded_video)
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=1872)
+    app.run_server(debug=True, host='0.0.0.0', port=1874)
