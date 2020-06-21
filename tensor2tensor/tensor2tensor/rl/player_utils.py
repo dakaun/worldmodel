@@ -72,7 +72,7 @@ class SimulatedGymEnv(gym.Env):
        setable_initial_frames: if True, initial_frames for world model should be
          set by `add_to_initial_stack`.
     """
-
+    self.batch_size=1
     self._setable_initial_frames = setable_initial_frames
 
     if self._setable_initial_frames:

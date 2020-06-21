@@ -62,8 +62,11 @@ import tensor2tensor
 import pygame
 import time
 #from tensor2tensor.rl.evaluator import make_agent_from_hparams
-#from tensor2tensor.rl import rl_utils
-
+from tensor2tensor.rl import rl_utils
+from tensor2tensor.models.research import rl
+from tensor2tensor.utils import trainer_lib
+from tensor2tensor.utils import hparams_lib
+from tensor2tensor.utils.hparam import HParams
 
 from tensor2tensor.bin import t2t_trainer  # pylint: disable=unused-import
 from tensor2tensor.rl import player_utils
@@ -89,11 +92,11 @@ flags.DEFINE_float("fps", 30,
                    "Frames per second.")
 flags.DEFINE_string("epoch", "last",
                     "Data from which epoch to use.")
-flags.DEFINE_boolean("sim_and_real", False,
+flags.DEFINE_boolean("sim_and_real", True,
                      "Compare simulated and real environment.")
 flags.DEFINE_boolean("simulated_env", True,
                      "Either to use 'simulated' or 'real' env.")
-flags.DEFINE_boolean("dry_run", False,
+flags.DEFINE_boolean("dry_run", True,
                      "Dry run - without pygame interaction and display, just "
                      "some random actions on environment")
 flags.DEFINE_string("model_ckpt", "",
@@ -110,6 +113,17 @@ flags.DEFINE_boolean("game_from_filenames", False,
                      "If infer game name from data_dir filenames or from "
                      "hparams.")
 
+@registry.register_hparams
+def planner_small(): #todo adapt to tiny?
+  return HParams(
+      num_rollouts=64,
+      planning_horizon=16,
+      rollout_agent_type="policy",
+      batch_size=64,
+      env_type="simulated",
+      uct_const=0.0,
+      uniform_first_action=True,
+  )
 
 class PlayerEnv(gym.Env):
   """Base (abstract) environment for interactive human play with gym.utils.play.
@@ -489,6 +503,55 @@ class SingleEnvPlayer(PlayerEnv):
     ob = np.zeros(self.env.observation_space.shape, dtype=np.uint8)
     return self._pack_step_tuples((ob, 0, True, {}))
 
+def make_agent(
+    agent_type, env, policy_hparams, policy_dir, sampling_temp,
+    sim_env_kwargs_fn=None, frame_stack_size=None, rollout_agent_type=None,
+    batch_size=None, inner_batch_size=None, env_type=None, **planner_kwargs
+):
+  """Factory function for Agents."""
+  if batch_size is None:
+    batch_size = env.batch_size
+  return {
+      "random": lambda: rl_utils.RandomAgent(  # pylint: disable=g-long-lambda
+          batch_size, env.observation_space, env.action_space
+      ),
+      "policy": lambda: rl_utils.PolicyAgent(  # pylint: disable=g-long-lambda
+          batch_size, env.observation_space, env.action_space,
+          policy_hparams, policy_dir, sampling_temp
+      )#,
+      #"planner": lambda: rl_utils.PlannerAgent(  # pylint: disable=g-long-lambda
+      #    batch_size, make_agent(
+      #        rollout_agent_type, env, policy_hparams, policy_dir,
+      #        sampling_temp, batch_size=inner_batch_size
+      #    ), make_env(env_type, env.env, sim_env_kwargs_fn()),
+      #    lambda env: rl_utils.BatchStackWrapper(env, frame_stack_size),
+      #    discount_factor=policy_hparams.gae_gamma, **planner_kwargs
+      #),
+  }[agent_type]()
+
+def make_agent_from_hparams(
+    agent_type, base_env, stacked_env, loop_hparams, policy_hparams,
+    planner_hparams, model_dir, policy_dir, sampling_temp, video_writers=()
+):
+  """Creates an Agent from hparams."""
+  def sim_env_kwargs_fn():
+    return rl.make_simulated_env_kwargs(
+        base_env, loop_hparams, batch_size=planner_hparams.batch_size,
+        model_dir=model_dir
+    )
+  planner_kwargs = planner_hparams.values()
+  planner_kwargs.pop("batch_size")
+  planner_kwargs.pop("rollout_agent_type")
+  planner_kwargs.pop("env_type")
+  return make_agent(
+      agent_type, stacked_env, policy_hparams, policy_dir, sampling_temp,
+      sim_env_kwargs_fn, 4, #loop_hparams.frame_stack_size
+      planner_hparams.rollout_agent_type,
+      inner_batch_size=planner_hparams.batch_size,
+      env_type=planner_hparams.env_type,
+      video_writers=video_writers, **planner_kwargs
+  )
+
 def display_arr(screen, arr, video_size, transpose):
     arr_min, arr_max = arr.min(), arr.max()
     arr = 255.0 * (arr - arr_min) / (arr_max - arr_min)
@@ -499,7 +562,7 @@ def display_arr(screen, arr, video_size, transpose):
 def main(_):
   print('Reached point here')
   # gym.logger.set_level(gym.logger.DEBUG)
-  hparams = registry.hparams(FLAGS.loop_hparams_set)
+  hparams = registry.hparams(FLAGS.loop_hparams_set) # add planner_small
   hparams.parse(FLAGS.loop_hparams)
   # Not important for experiments past 2018
   if "wm_policy_param_sharing" not in hparams.values().keys():
@@ -548,12 +611,19 @@ def main(_):
 
   if FLAGS.dry_run:
     # build agent
-    #stacked_env = rl_utils.BatchStackWrapper(env, stack_size=4)
-    #eval_hparams = trainer_lib.create_hparams(hparams.b)
-    #agent = make_agent_from_hparams(agent_type='policy', base_env=env, stacked_env=stacked_env, loop_hparams=FLAGS.loop_hparams,
-    #                                policy_hparams=eval_hparams, planner_hparams="", model_dir="", policy_dir="agent_model_dir", sampling_temp="5", video_writers=())
-    #agent_type, base_env, env, loop_hparams, policy_hparams, planner_hparams, model_dir, policy_dir, sampling_temp, video_writers
-    #
+    env.env.env.env.sim_env = rl_utils.BatchStackWrapper(env.env.env.env.sim_env, stack_size=4)
+    eval_hparams = trainer_lib.create_hparams('ppo_original_params')
+    planner_hparams = hparams_lib.create_hparams('planner_small')
+    #planner_hparams = trainer_lib.create_hparams(
+    #    'planner_small', ''
+    #) # 'planner_small' registered with registry hparams
+    #planner_hparams = {
+    #    'batch_size': 64, 'env_type': 'simulated', 'num_rollouts': 64, 'planning_horizon': 16,
+    #    'rollout_agent_type': 'policy', 'uct_const': 0.0, 'uniform_first_action': True
+    #} # no .value() function in make_agent_from_params
+    policy_dir= 'gs://tensor2tensor-checkpoints/modelrl_experiments/train_sd/142/policy'
+    agent = make_agent_from_hparams(agent_type='policy', base_env=env.env.env.env.real_env, stacked_env=env.env.env.env.sim_env, loop_hparams=FLAGS.loop_hparams,
+                                    policy_hparams=eval_hparams, planner_hparams=planner_hparams, model_dir="", policy_dir=policy_dir, sampling_temp=0.5, video_writers=())
 
 
     env.unwrapped.get_keys_to_action()
