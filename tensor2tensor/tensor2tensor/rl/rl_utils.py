@@ -39,6 +39,8 @@ from tensor2tensor.rl.ppo_learner import PPOLearner
 from tensor2tensor.utils import misc_utils
 from tensor2tensor.utils import trainer_lib
 
+from tensor2tensor.rl import player_utils
+
 import tensorflow as tf
 
 
@@ -457,6 +459,7 @@ def run_rollouts(
     if agent.needs_env_state:
       act_kwargs["env_state"] = env.state
     actions = agent.act(observations, **act_kwargs)
+    print(actions)
     (observations, rewards, dones) = env.step(actions)
     observations = list(observations)
     now_done_indices = []
@@ -810,7 +813,11 @@ class BatchStackWrapper(BatchWrapper):
     if indices is None:
       indices = range(self.batch_size)
 
-    observations = self.env.reset(indices)
+    if isinstance(self.env, player_utils.SimulatedGymEnv):
+        observations = self.env.reset()
+        observations = observations.reshape(1,observations.shape[0], observations.shape[1], observations.shape[2])
+    else:
+        observations = self.env.reset(indices)
     try:
       # If we wrap the simulated env, take the initial frames from there.
       assert self.env.initial_frames.shape[1] == self.stack_size
@@ -829,10 +836,16 @@ class BatchStackWrapper(BatchWrapper):
     return self._history_buffer
 
   def step(self, actions):
-    (observations, rewards, dones) = self.env.step(actions)
-    self._history_buffer = np.roll(self._history_buffer, shift=-1, axis=1)
-    self._history_buffer[:, -1, ...] = observations
-    return (self._history_buffer, rewards, dones)
+    if isinstance(self.env, player_utils.SimulatedGymEnv):
+        observations, rewards, dones, _ = self.env.step(actions)
+        self._history_buffer = np.roll(self._history_buffer, shift=-1, axis=1)
+        self._history_buffer[:, -1, ...] = observations
+        return (self._history_buffer, rewards, dones, {})
+    else:
+        (observations, rewards, dones) = self.env.step(actions)
+        self._history_buffer = np.roll(self._history_buffer, shift=-1, axis=1)
+        self._history_buffer[:, -1, ...] = observations
+        return (self._history_buffer, rewards, dones)
 
 
 class SimulatedBatchGymEnvWithFixedInitialFrames(BatchWrapper):

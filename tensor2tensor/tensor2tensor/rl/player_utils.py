@@ -241,6 +241,16 @@ class RenderObservations(gym.Wrapper):
     assert mode == "rgb_array"
     return self.last_observation
 
+# class Monitor(gym.wrappers.Monitor):
+#     def __init__(self, *args, **kwargs):
+#         print('HERE OWN MONITOR')
+#         super(Monitor, self).__init__(*args, **kwargs)
+#
+#     def reset(self, **kwargs):
+#         self._before_reset()
+#         observation = self.env.reset(**kwargs)
+#         self._after_reset(observation[0])
+#         return observation
 
 def wrap_with_monitor(env, video_dir):
   """Wrap environment with gym.Monitor.

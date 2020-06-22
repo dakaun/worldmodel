@@ -96,7 +96,7 @@ flags.DEFINE_boolean("sim_and_real", True,
                      "Compare simulated and real environment.")
 flags.DEFINE_boolean("simulated_env", True,
                      "Either to use 'simulated' or 'real' env.")
-flags.DEFINE_boolean("dry_run", True,
+flags.DEFINE_boolean("dry_run", False,
                      "Dry run - without pygame interaction and display, just "
                      "some random actions on environment")
 flags.DEFINE_string("model_ckpt", "",
@@ -227,11 +227,17 @@ class PlayerEnv(gym.Env):
   def step(self, action):
     """Pass action to underlying environment(s) or perform special action."""
     # Special codes
+    if type(action)== np.ndarray:
+        action = int(action)
     if action in self._player_actions():
       envs_step_tuples = self._player_actions()[action]()
     elif self._wait and action == self.name_to_action_num["NOOP"]:
       # Ignore no-op, do not pass to environment.
       envs_step_tuples = self._last_step_tuples
+      if isinstance(self.sim_env, rl_utils.BatchStackWrapper):
+          envs_step_tuples = dict(envs_step_tuples)
+          envs_step_tuples['sim_env'] = list(envs_step_tuples['sim_env'])
+          envs_step_tuples['sim_env'][0] = self.sim_env._history_buffer
     else:
       # Run action on environment(s).
       if action == self.WAIT_MODE_NOOP_ACTION:
@@ -240,7 +246,13 @@ class PlayerEnv(gym.Env):
       envs_step_tuples = self._step_envs(action)
       self._update_statistics(envs_step_tuples)
 
-    self._last_step_tuples = envs_step_tuples
+    if len(envs_step_tuples['sim_env'][0].shape)>3:
+        envs_step_tuples_laststep= dict(envs_step_tuples)
+        envs_step_tuples_laststep['sim_env'] = list(envs_step_tuples_laststep['sim_env'])
+        envs_step_tuples_laststep['sim_env'][0] = envs_step_tuples_laststep['sim_env'][0][0][-1]
+        self._last_step_tuples = envs_step_tuples_laststep
+    else:
+        self._last_step_tuples = envs_step_tuples
     #print('PlayerEnv.step(): ', envs_step_tuples)
     #print('PlayerEnv.step(): ', envs_step_tuples)
     ob, reward, done, info = self._player_step_tuple(envs_step_tuples)
@@ -384,7 +396,11 @@ class SimAndRealEnvPlayer(PlayerEnv):
         info: real environment info
     """
     ob_real, reward_real, _, _ = envs_step_tuples["real_env"]
-    ob_sim, reward_sim, _, _ = envs_step_tuples["sim_env"]
+    if len(envs_step_tuples["sim_env"][0].shape) ==5:
+        ob_sim, reward_sim, _, _ = envs_step_tuples["sim_env"]
+        ob_sim = ob_sim[0][-1]
+    else:
+        ob_sim, reward_sim, _, _ = envs_step_tuples["sim_env"]
     ob_err = absolute_hinge_difference(ob_sim, ob_real)
 
     ob_real_aug = self._augment_observation(ob_real, reward_real,
@@ -397,24 +413,42 @@ class SimAndRealEnvPlayer(PlayerEnv):
     )
     ob = np.concatenate([ob_sim_aug, ob_real_aug, ob_err_aug], axis=1)
     _, reward, done, info = envs_step_tuples["real_env"]
-    return ob, reward, done, info
+    if len(envs_step_tuples['sim_env'][0].shape) >3:
+        return (ob,envs_step_tuples['sim_env'][0]), reward, done, info
+    else:
+        return ob, reward, done, info
 
   def reset(self):
     """Reset simulated and real environments."""
     self._frame_counter = 0
     ob_real = self.real_env.reset()
     # Initialize simulated environment with frames from real one.
-    self.sim_env.add_to_initial_stack(ob_real)
-    for _ in range(3):
-      ob_real, _, _, _ = self.real_env.step(self.name_to_action_num["NOOP"])
-      self.sim_env.add_to_initial_stack(ob_real)
-    ob_sim = self.sim_env.reset()
-    assert np.all(ob_real == ob_sim)
-    self._last_step_tuples = self._pack_step_tuples((ob_real, 0, False, {}),
-                                                    (ob_sim, 0, False, {}))
-    self.set_zero_cumulative_rewards()
-    ob, _, _, _ = self._player_step_tuple(self._last_step_tuples)
-    return ob
+    if isinstance(self.sim_env, rl_utils.BatchStackWrapper):
+        self.sim_env.env.add_to_initial_stack(ob_real)
+        for _ in range(3):
+            ob_real, _, _, _ = self.real_env.step(self.name_to_action_num["NOOP"])
+            self.sim_env.env.add_to_initial_stack(ob_real)
+        obs4_sim = self.sim_env.reset() #shape (1, 4, 105, 80, 3)
+        ob_sim = obs4_sim[0][0]
+        assert np.all(ob_real == ob_sim)
+        self._last_step_tuples = self._pack_step_tuples((ob_real, 0, False, {}),
+                                                        (ob_sim, 0, False, {}))
+        self.set_zero_cumulative_rewards()
+        ob, _, _, _ = self._player_step_tuple(self._last_step_tuples)
+        return ob, obs4_sim # shows three images (sim, real, diff + annotations)
+
+    else:
+        self.sim_env.add_to_initial_stack(ob_real)
+        for _ in range(3):
+            ob_real, _, _, _ = self.real_env.step(self.name_to_action_num["NOOP"])
+            self.sim_env.add_to_initial_stack(ob_real)
+        ob_sim = self.sim_env.reset()
+        assert np.all(ob_real == ob_sim)
+        self._last_step_tuples = self._pack_step_tuples((ob_real, 0, False, {}),
+                                                        (ob_sim, 0, False, {}))
+        self.set_zero_cumulative_rewards()
+        ob, _, _, _ = self._player_step_tuple(self._last_step_tuples)
+        return ob
 
   def _pack_step_tuples(self, real_env_step_tuple, sim_env_step_tuple):
     return dict(real_env=real_env_step_tuple,
@@ -426,12 +460,16 @@ class SimAndRealEnvPlayer(PlayerEnv):
 
   def _step_envs(self, action):
     """Perform step(action) on environments and update initial_frame_stack."""
-    print('SimAndRealEnvPlayer._step_envs) ', action)
+    #print('SimAndRealEnvPlayer._step_envs) ', action)
 
     self._frame_counter += 1
     real_env_step_tuple = self.real_env.step(action)
     sim_env_step_tuple = self.sim_env.step(action)
-    self.sim_env.add_to_initial_stack(real_env_step_tuple[0])
+    if isinstance(self.sim_env, rl_utils.BatchStackWrapper):
+        self.sim_env.env.add_to_initial_stack(real_env_step_tuple[0])
+
+    else:
+        self.sim_env.add_to_initial_stack(real_env_step_tuple[0])
     return self._pack_step_tuples(real_env_step_tuple, sim_env_step_tuple)
 
   def _update_statistics(self, envs_step_tuples):
@@ -607,11 +645,15 @@ def main(_):
       env = make_real_env()
     env = SingleEnvPlayer(env, action_meanings)  # pylint: disable=redefined-variable-type
 
-  env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
+  #env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
+  #env.reset()
+  #for i in range(10):
+  #    obs, rew, env_done, info = env.step(i%6)
+  #    rendered = env.render(mode='rgb_array')
 
   if FLAGS.dry_run:
     # build agent
-    env.env.env.env.sim_env = rl_utils.BatchStackWrapper(env.env.env.env.sim_env, stack_size=4)
+    env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
     eval_hparams = trainer_lib.create_hparams('ppo_original_params')
     planner_hparams = hparams_lib.create_hparams('planner_small')
     #planner_hparams = trainer_lib.create_hparams(
@@ -622,33 +664,37 @@ def main(_):
     #    'rollout_agent_type': 'policy', 'uct_const': 0.0, 'uniform_first_action': True
     #} # no .value() function in make_agent_from_params
     policy_dir= 'gs://tensor2tensor-checkpoints/modelrl_experiments/train_sd/142/policy'
-    agent = make_agent_from_hparams(agent_type='policy', base_env=env.env.env.env.real_env, stacked_env=env.env.env.env.sim_env, loop_hparams=FLAGS.loop_hparams,
+    agent = make_agent_from_hparams(agent_type='policy', base_env=env.real_env, stacked_env=env.sim_env, loop_hparams=FLAGS.loop_hparams,
                                     policy_hparams=eval_hparams, planner_hparams=planner_hparams, model_dir="", policy_dir=policy_dir, sampling_temp=0.5, video_writers=())
 
 
     env.unwrapped.get_keys_to_action()
-    env.reset()
-    rendered = env.render(mode = 'rgb_array')
+    obsshow, obs4 = env.reset()
+    #rendered = env.render(mode = 'rgb_array') brauch ich doch gar nicht.. rendered=obsshow
 
-    video_size = [rendered.shape[1],rendered.shape[0]]
+    video_size = [obsshow.shape[1],obsshow.shape[0]]
     zoom = 3
     video_size = int(video_size[0] * zoom), int(video_size[1] * zoom)
     screen = pygame.display.set_mode(video_size)
 
     for _ in range(1):
-      env.reset()
+        # teilweise von play.play kopiert
+      #env.reset()
       for i in range(50):
         # observations: 4 stacked observations, shape: (1,4,105,80,3)
-        #actions = agent.act(observations, {})
-        obs, rew, env_done, info = env.step(i % 6)
-        rendered = env.render(mode='rgb_array')
-        display_arr(screen, rendered, transpose=True, video_size=video_size)
+        actions = agent.act(obs4, {}) # todo if action = 0, obs4 stays the same - should be adapted
+        print(actions)
+        obs, rew, env_done, info = env.step(actions)
+        obsshow, obs4 = obs
+        #rendered = env.render(mode='rgb_array')
+        display_arr(screen, obsshow, transpose=True, video_size=video_size)
         time.sleep(0.5)
         pygame.display.flip()
       env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
     return
-
-  play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
+  else:
+      env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
+      play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
   env.close()
   print('env closed')
 
