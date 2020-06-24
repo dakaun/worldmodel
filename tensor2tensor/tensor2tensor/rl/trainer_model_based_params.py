@@ -32,7 +32,7 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 
-flags.DEFINE_string("loop_hparams_set", "rlmb_long_stochastic_discrete",#"rlmb_base",
+flags.DEFINE_string("loop_hparams_set", "rlmb_long_stochastic_discrete",#"rlmb_base" rlmb_long_stochastic_discrete
                     "Which RL hparams set to use.")
 flags.DEFINE_string("loop_hparams", "game=pong", "Overrides for overall loop HParams.") #,eval_max_num_noops=8,eval_sampling_temps=[0.5]
 flags.DEFINE_string("job_dir_to_evaluate", "",

@@ -663,7 +663,7 @@ def main(_):
     #    'batch_size': 64, 'env_type': 'simulated', 'num_rollouts': 64, 'planning_horizon': 16,
     #    'rollout_agent_type': 'policy', 'uct_const': 0.0, 'uniform_first_action': True
     #} # no .value() function in make_agent_from_params
-    policy_dir= 'gs://tensor2tensor-checkpoints/modelrl_experiments/train_sd/142/policy'
+    policy_dir= 'gs://tensor2tensor-checkpoints/modelrl_experiments/train_sd/142/world_model'
     agent = make_agent_from_hparams(agent_type='policy', base_env=env.real_env, stacked_env=env.sim_env, loop_hparams=FLAGS.loop_hparams,
                                     policy_hparams=eval_hparams, planner_hparams=planner_hparams, model_dir="", policy_dir=policy_dir, sampling_temp=0.5, video_writers=())
 
