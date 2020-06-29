@@ -101,7 +101,7 @@ flags.DEFINE_boolean("dry_run", False,
                      "some random actions on environment")
 flags.DEFINE_string("model_ckpt", "",
                     "World model checkpoint path.")
-flags.DEFINE_string("wm_dir", "/home/student/t2t_train/mb_sd_pong_pretrained/world_model",
+flags.DEFINE_string("wm_dir", "/home/student/t2t_train/mb_sd_pong_pretrained3/142/world_model",
                     "Directory with world model checkpoints. Inferred from "
                     "output_dir if empty.")
 flags.DEFINE_string("policy_dir", "",
@@ -112,6 +112,8 @@ flags.DEFINE_string("episodes_data_dir", "",
 flags.DEFINE_boolean("game_from_filenames", False,
                      "If infer game name from data_dir filenames or from "
                      "hparams.")
+flags.DEFINE_boolean('show_all_actions', True, 'Show all possible actions and their course')
+dry_run = False
 
 @registry.register_hparams
 def planner_small(): #todo adapt to tiny?
@@ -598,7 +600,6 @@ def display_arr(screen, arr, video_size, transpose):
     screen.blit(pyg_img, (0,0))
 
 def main(_):
-  print('Reached point here')
   # gym.logger.set_level(gym.logger.DEBUG)
   hparams = registry.hparams(FLAGS.loop_hparams_set) # add planner_small
   hparams.parse(FLAGS.loop_hparams)
@@ -651,47 +652,125 @@ def main(_):
   #    obs, rew, env_done, info = env.step(i%6)
   #    rendered = env.render(mode='rgb_array')
 
-  if FLAGS.dry_run:
+  if FLAGS.dry_run or dry_run:
+    print('dry run')
     # build agent
     env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
     eval_hparams = trainer_lib.create_hparams('ppo_original_params')
     planner_hparams = hparams_lib.create_hparams('planner_small')
-    #planner_hparams = trainer_lib.create_hparams(
-    #    'planner_small', ''
-    #) # 'planner_small' registered with registry hparams
-    #planner_hparams = {
-    #    'batch_size': 64, 'env_type': 'simulated', 'num_rollouts': 64, 'planning_horizon': 16,
-    #    'rollout_agent_type': 'policy', 'uct_const': 0.0, 'uniform_first_action': True
-    #} # no .value() function in make_agent_from_params
-    policy_dir= 'gs://tensor2tensor-checkpoints/modelrl_experiments/train_sd/142/world_model'
+    policy_dir= '~/t2t_train/mb_sd_pong_pretrained3/142/policy'
     agent = make_agent_from_hparams(agent_type='policy', base_env=env.real_env, stacked_env=env.sim_env, loop_hparams=FLAGS.loop_hparams,
                                     policy_hparams=eval_hparams, planner_hparams=planner_hparams, model_dir="", policy_dir=policy_dir, sampling_temp=0.5, video_writers=())
 
 
     env.unwrapped.get_keys_to_action()
     obsshow, obs4 = env.reset()
-    #rendered = env.render(mode = 'rgb_array') brauch ich doch gar nicht.. rendered=obsshow
 
     video_size = [obsshow.shape[1],obsshow.shape[0]]
     zoom = 3
     video_size = int(video_size[0] * zoom), int(video_size[1] * zoom)
     screen = pygame.display.set_mode(video_size)
 
+    pong_human_sets_pause=False
+
     for _ in range(1):
-        # teilweise von play.play kopiert
-      #env.reset()
-      for i in range(50):
-        # observations: 4 stacked observations, shape: (1,4,105,80,3)
-        actions = agent.act(obs4, {}) # todo if action = 0, obs4 stays the same - should be adapted
+      # teilweise von play.play kopiert
+      observations = []
+      for i in range(20):
+        actions = agent.act(obs4, {})
         print(actions)
         obs, rew, env_done, info = env.step(actions)
         obsshow, obs4 = obs
-        #rendered = env.render(mode='rgb_array')
         display_arr(screen, obsshow, transpose=True, video_size=video_size)
-        time.sleep(0.5)
+        observations.append(obsshow)
+        time.sleep(2)
         pygame.display.flip()
+
+        for event in pygame.event.get(): #['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']
+            if event.type ==pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT: #unten 5
+                    time.sleep(1)
+                    obs, rew, env_done, info = env.step(np.array([5]))
+                    print('Keys down')
+                if event.key == pygame.K_RIGHT: #oben 2
+                    time.sleep(1)
+                    obs, rew, env_done, info = env.step(np.array([4]))
+                    print('Keys up')
+                obsshow, obs4 = obs
+                display_arr(screen, obsshow, transpose=True, video_size=video_size)
+                observations.append(obsshow)
+                time.sleep(1)
+                pygame.display.flip()
+             #   pong_human_sets_pause = not pong_human_sets_pause
+
+        #if pong_human_sets_pause:
+        #    print('HERE')
+        #    time.sleep(2)
+        #    pong_human_sets_pause = False
+
       env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
-    return
+    observations = np.array(observations)
+    lenframes = observations.shape[0]
+    env.close()
+    pygame.quit()
+    return observations, lenframes
+  elif FLAGS.show_all_actions: #press space and show all actions
+      # build agent
+      env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
+      eval_hparams = trainer_lib.create_hparams('ppo_original_params')
+      planner_hparams = hparams_lib.create_hparams('planner_small')
+      policy_dir = '~/t2t_train/mb_sd_pong_pretrained3/142/policy'
+      agent = make_agent_from_hparams(agent_type='policy', base_env=env.real_env, stacked_env=env.sim_env,
+                                      loop_hparams=FLAGS.loop_hparams,
+                                      policy_hparams=eval_hparams, planner_hparams=planner_hparams, model_dir="",
+                                      policy_dir=policy_dir, sampling_temp=0.5, video_writers=())
+
+      env.unwrapped.get_keys_to_action()
+      obsshow, obs4 = env.reset()
+
+      video_size = [obsshow.shape[1], obsshow.shape[0]]
+      zoom = 3
+      video_size = int(video_size[0] * zoom), int(video_size[1] * zoom)
+      screen = pygame.display.set_mode(video_size)
+
+      for _ in range(1):
+          # teilweise von play.play kopiert
+          observations = []
+          for i in range(20):
+              # observations: 4 stacked observations, shape: (1,4,105,80,3)
+              actions = agent.act(obs4, {})
+              print(actions)
+              obs, rew, env_done, info = env.step(actions)
+              obsshow, obs4 = obs
+              # rendered = env.render(mode='rgb_array')
+              display_arr(screen, obsshow, transpose=True, video_size=video_size)
+              observations.append(obsshow)
+              time.sleep(2)
+              pygame.display.flip()
+              if i==10:
+                  print('save game status')
+
+
+              for event in pygame.event.get():  # ['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']
+                  if event.type == pygame.KEYDOWN:
+                      if event.key == pygame.K_SPACE:  # unten 5
+                          # Save Game Status
+                          obs, rew, env_done, info = env.step()
+
+                      obsshow, obs4 = obs
+                      display_arr(screen, obsshow, transpose=True, video_size=video_size)
+                      observations.append(obsshow)
+                      time.sleep(1)
+                      pygame.display.flip()
+                  #   pong_human_sets_pause = not pong_human_sets_pause
+
+
+          env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
+      observations = np.array(observations)
+      lenframes = observations.shape[0]
+      env.close()
+      pygame.quit()
+      return observations, lenframes
   else:
       env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
       play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
