@@ -217,20 +217,55 @@ pong = html.Div(id='header1',
                 },
                 children=[
                     html.H1(children='Pong World Model'),
-                    html.H3(children='Dashboard to display word model of Pong.'),
-                    html.Div(id='subbody', children=[
-                              html.H5(['Press Button to run Pong.']),
-                              html.Button('Start Pong',
-                                          id='start_gamep',
-                                          n_clicks=0)
-                          ]),
-                          html.Video(id='initial_game_videop',
-                                     controls=True,
-                                     style={
-                                         'textAlign': 'center'
-                                     },
-                                     height=396,
-                                     width=720)
+                    html.H2(children='Interact with the Agent inside the World Model'),
+                    html.Div(id='playing_pong', children=[
+                        html.H3(children='Dashboard to play Pong inside the word model.'),
+                        html.Div(id='subbody', children=[
+                            html.H5(['Press Button to play Pong.']),
+                            html.Button('Start to play Pong',
+                                        id='start_play_gamep',
+                                        n_clicks=0)
+                            ]),
+                        html.Video(id='playing_gamep',
+                                   controls=True,
+                                   style={
+                                       'textAlign': 'center'
+                                       },
+                                   height=396,
+                                   width=720)
+                        ]),
+                    html.Div(id='pong_run_in_worldmodel', children=[
+                        html.H3(children='Dashboard to play Pong inside the word model.'),
+                        html.Div(id='subbody2', children=[
+                            html.H5(['Press Button to run Pong.']),
+                            html.Button('Start Pong in World Model',
+                                        id='start_gamep',
+                                        n_clicks=0)
+                            ]),
+                        html.Video(id='initial_game_videop',
+                                   controls=True,
+                                   style={
+                                       'textAlign': 'center'
+                                       },
+                                   height=396,
+                                   width=720)
+                        ]),
+                    html.Div(id='pong_run_in_worldmodel_showallactions', children=[
+                        html.H3(children='Dashboard to play Pong inside the word model and show all actions after pausing Game.'),
+                        html.Div(id='subbody3', children=[
+                            html.H5(['Press Button to run Pong.']),
+                            html.Button('Start Pong in World Model',
+                                        id='start_gamep',
+                                        n_clicks=0)
+                            ]),
+                        html.Video(id='game_videop_allactions',
+                                   controls=True,
+                                   style={
+                                       'textAlign': 'center'
+                                       },
+                                   height=396,
+                                   width=720)
+                        ])
                 ])
 
 overview = html.Div(id='header1',
@@ -263,13 +298,13 @@ def display_page(pathname):
     elif pathname=='/pong':
         return pong
 
-@app.callback(Output('initial_game_videop', 'src'),
+@app.callback(Output('playing_gamep', 'src'),
               [Input('url', 'pathname'),
-               Input('start_gamep', 'n_clicks')])
-def pong_playgame_showframes(page, buttonclick):
+               Input('start_play_gamep', 'n_clicks')])
+def pong_playing_showframes(page, buttonclick):
     if ('pong' in page) and buttonclick:
         print('start playing game')
-        player.main('')
+        player.main(dry_run=False)
         print('game played')
         filename =[]
         print('list files in dir')
@@ -285,11 +320,28 @@ def pong_playgame_showframes(page, buttonclick):
         print('send video to dashboard')
         return 'data:video/mp4;base64,{}'.format(encoded_video)
 
-#4.75 , 6.09
+@app.callback(Output('initial_game_videop', 'src'),
+              [Input('url', 'pathname'),
+               Input('start_gamep', 'n_clicks')])
+def pong_worldmodelt2t_showframes(page, buttonclick):
+    if ('pong' in page) and buttonclick:
+        observations, fin_counter = player.main(dry_run=True)
+        filename='obs_video_pong.webm'
+        height = observations[0].shape[0]
+        width = observations[0].shape[1]
+        observations = observations[:, :, :, [2, 1, 0]]
+        video = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'vp80'), 10, frameSize=(width, height))
+        for image in range(fin_counter):
+            video.write(observations[image])
+        video.release()
+        videom =open(filename, 'rb').read()
+        encoded_video= base64.b64encode(videom).decode()
+        return 'data:video/mp4;base64,{}'.format(encoded_video)
+
 @app.callback(Output('initial_game_videoc', 'src'),
               [Input('url', 'pathname'),
                Input('start_gamec', 'n_clicks')])
-def carracing_startgame_showframes(page, buttonclick):
+def carracing_worldmodel_showframes(page, buttonclick):
     path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200522'
     rnn_path = path + '/tf_rnn/rnn.json'
     vae_path = path + '/tf_vae/vae.json'
@@ -353,7 +405,7 @@ def carracing_startgame_showframes(page, buttonclick):
 @app.callback(Output('initial_game_videob', 'src'),
               [Input('url','pathname'),
                Input('start_gameb', 'n_clicks')])
-def breakout_startgame_showframes(page, buttonclick):
+def breakout_worldmodel_showframes(page, buttonclick):
     path = '/home/student/Dropbox/MA/worldmodel/worldmodel-breakout-server-version-v3/200420/retrain/'
     rnn_path = path + '/tf_rnn/rnn.json'
     vae_path = path + '/tf_vae/vae.json'
@@ -408,4 +460,4 @@ def breakout_startgame_showframes(page, buttonclick):
         return 'data:video/webm;base64,{}'.format(encoded_video)
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=1874)
+    app.run_server(debug=True, host='0.0.0.0', port=1875)
