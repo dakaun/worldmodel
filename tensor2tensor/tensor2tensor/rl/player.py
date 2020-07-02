@@ -114,6 +114,7 @@ flags.DEFINE_boolean("game_from_filenames", False,
                      "hparams.")
 flags.DEFINE_boolean('show_all_actions', True, 'Show all possible actions and their course')
 dry_run = False
+show_all_actions = True
 
 @registry.register_hparams
 def planner_small(): #todo adapt to tiny?
@@ -599,7 +600,57 @@ def display_arr(screen, arr, video_size, transpose):
     pyg_img = pygame.transform.scale(pyg_img, video_size)
     screen.blit(pyg_img, (0,0))
 
-def main(_):
+def resume_game(agent, env, screen, observations, simenv_pvar, simenv_var, realenv_var, pauseobs, frame_counter,
+                laststeptuples, pause_reward, action):
+    print(action)
+    env.sim_env.env.env.batch_env._actions_t = simenv_pvar['actions']
+    env.sim_env.env.env.batch_env._batch_env = simenv_pvar['batch_env']
+    env.sim_env.env.env.batch_env._dones_t = simenv_pvar['dones']
+    env.sim_env.env.env.batch_env._indices_t = simenv_pvar['indices']
+    env.sim_env.env.env.batch_env._obs_t = simenv_pvar['obs']
+    env.sim_env.env.env.batch_env._reset_t = simenv_pvar['reset']
+    env.sim_env.env.env.batch_env._reset_op = simenv_pvar['reset']
+    env.sim_env.env.env.batch_env._rewards_t = simenv_pvar['reward']
+    env.sim_env.env.env.batch_env._sess = simenv_pvar['sess']
+
+    env.real_env.batch_env._envs[0].env.env.restore_full_state(realenv_var['alestate'])
+    env.real_env.batch_env.state[0] = realenv_var['state']
+
+    env.sim_env._history_buffer = simenv_var['hbuffer']
+    env.sim_env._initial_frames = simenv_var['iframes']
+
+    env._frame_counter = frame_counter
+    env._last_step_tuples = laststeptuples
+    env.cumulative_real_reward = pause_reward['realr']
+    env.cumulative_real_reward = pause_reward['simr']
+
+    obs4, obsshow = pauseobs
+    appendend_obs = []
+
+    video_size = [obsshow.shape[1], obsshow.shape[0]]
+    zoom = 3
+    video_size = int(video_size[0] * zoom), int(video_size[1] * zoom)
+
+    obs, rew, env_done, info = env.step(action)
+    obsshow, obs4 = obs
+    observations.append(obsshow)
+
+    for i in range(5):
+        # observations: 4 stacked observations, shape: (1,4,105,80,3)
+        actions = agent.act(obs4, {})
+        print(actions)
+        obs, rew, env_done, info = env.step(actions)
+        obsshow, obs4 = obs
+        # rendered = env.render(mode='rgb_array')
+        #display_arr(screen, obsshow, transpose=True, video_size=video_size)
+        observations.append(obsshow)
+        time.sleep(2)
+        #pygame.display.flip()
+    env.close()
+    #pygame.quit()
+    return observations
+
+def main(dry_run=False, show_all_actions=False):
   # gym.logger.set_level(gym.logger.DEBUG)
   hparams = registry.hparams(FLAGS.loop_hparams_set) # add planner_small
   hparams.parse(FLAGS.loop_hparams)
@@ -714,7 +765,7 @@ def main(_):
     env.close()
     pygame.quit()
     return observations, lenframes
-  elif FLAGS.show_all_actions: #press space and show all actions
+  elif FLAGS.show_all_actions or show_all_actions: #press space and show all actions
       # build agent
       env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
       eval_hparams = trainer_lib.create_hparams('ppo_original_params')
@@ -733,44 +784,83 @@ def main(_):
       video_size = int(video_size[0] * zoom), int(video_size[1] * zoom)
       screen = pygame.display.set_mode(video_size)
 
-      for _ in range(1):
-          # teilweise von play.play kopiert
-          observations = []
-          for i in range(20):
-              # observations: 4 stacked observations, shape: (1,4,105,80,3)
-              actions = agent.act(obs4, {})
-              print(actions)
-              obs, rew, env_done, info = env.step(actions)
-              obsshow, obs4 = obs
-              # rendered = env.render(mode='rgb_array')
-              display_arr(screen, obsshow, transpose=True, video_size=video_size)
-              observations.append(obsshow)
-              time.sleep(2)
-              pygame.display.flip()
-              if i==10:
-                  print('save game status')
+      pong_human_pause = False
 
+      # teilweise von play.play kopiert
+      observations = []
+      for i in range(20):
+          # observations: 4 stacked observations, shape: (1,4,105,80,3)
+          actions = agent.act(obs4, {})
+          print('for ', i, ' and action ', actions)
+          #print(actions)
+          obs, rew, env_done, info = env.step(actions)
+          obsshow, obs4 = obs
+          # rendered = env.render(mode='rgb_array')
+          display_arr(screen, obsshow, transpose=True, video_size=video_size)
+          observations.append(obsshow)
+          time.sleep(2)
+          pygame.display.flip()
 
-              for event in pygame.event.get():  # ['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']
-                  if event.type == pygame.KEYDOWN:
-                      if event.key == pygame.K_SPACE:  # unten 5
-                          # Save Game Status
-                          obs, rew, env_done, info = env.step()
+          for event in pygame.event.get():  # ['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']
+              if event.type == pygame.KEYDOWN:
+                  if event.key == pygame.K_SPACE:  # unten 5
+                      pong_human_pause = True
+                      print('space angekommen')
+                      # Save Game Status
+          if pong_human_pause:
+              simenv_pvar = {
+                  'actions': env.sim_env.env.env.batch_env._actions_t,
+                  'batch_env': env.sim_env.env.env.batch_env._batch_env,
+                  'dones': env.sim_env.env.env.batch_env._dones_t,
+                  'indices': env.sim_env.env.env.batch_env._indices_t,
+                  'obs': env.sim_env.env.env.batch_env._obs_t,
+                  'reset': env.sim_env.env.env.batch_env._reset_op,
+                  'reward': env.sim_env.env.env.batch_env._rewards_t,
+                  'sess': env.sim_env.env.env.batch_env._sess
+              }
+              simenv_var = {
+                  'hbuffer': env.sim_env._history_buffer,
+                  'iframes': env.sim_env._initial_frames
+              }
+              realenv_var={
+                  'state': env.real_env.batch_env.state,
+                  'alestate': env.real_env.batch_env._envs[0].env.env.clone_full_state()
+              }
+              pauseobs = (obs4, obsshow)
+              frame_counter = env._frame_counter
+              laststeptuples = env._last_step_tuples
+              from copy import deepcopy
+              pause_observations = deepcopy(observations) # try deepcopy
+              pause_reward = {'realr': env.cumulative_real_reward,
+                              'simr': env.cumulative_sim_reward}
 
-                      obsshow, obs4 = obs
-                      display_arr(screen, obsshow, transpose=True, video_size=video_size)
-                      observations.append(obsshow)
-                      time.sleep(1)
-                      pygame.display.flip()
-                  #   pong_human_sets_pause = not pong_human_sets_pause
-
-
-          env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
-      observations = np.array(observations)
-      lenframes = observations.shape[0]
+              #resume game with different actions
+              # normal
+              print('resume game')
+              obs_normal = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
+                            realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([0]))
+              print('normalgamedone')
+              # oben
+              obs_up = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
+                            realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([4]))
+              print('rightdone')
+              # unten
+              obs_down = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
+                            realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([5]))
+              print('leftdone')
+              break
+      print('reseting')
+      env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
+      obs_normal = np.array(obs_normal)
+      obs_up = np.array(obs_up)
+      obs_down = np.array(obs_down)
+      print('concatenating')
+      obs_total = np.concatenate((obs_up, obs_normal, obs_down), axis=2)
+      print(obs_total.shape[0], obs_total.shape[1], obs_total.shape[2])
+      lenframes = obs_total.shape[0]
       env.close()
       pygame.quit()
-      return observations, lenframes
+      return obs_total, lenframes
   else:
       env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
       play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
