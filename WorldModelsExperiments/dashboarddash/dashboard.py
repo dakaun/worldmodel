@@ -298,7 +298,9 @@ def display_page(pathname):
     elif pathname=='/pong':
         return pong
 
-@app.callback(Output('playing_gamep', 'src'),
+@app.callback([Output('playing_gamep', 'src'),
+               Output('playing_gamep', 'height'),
+               Output('playing_gamep', 'width')],
               [Input('url', 'pathname'),
                Input('start_play_gamep', 'n_clicks')])
 def pong_playing(page, buttonclick):
@@ -318,9 +320,14 @@ def pong_playing(page, buttonclick):
         videom = open('gym-results/' + filename[1], 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         print('send video to dashboard')
-        return 'data:video/mp4;base64,{}'.format(encoded_video)
+        src= 'data:video/mp4;base64,{}'.format(encoded_video)
+        height = 396
+        width = 720
+        return src, height, width
 
-@app.callback(Output('initial_game_videop', 'src'),
+@app.callback([Output('initial_game_videop', 'src'),
+               Output('initial_game_videop', 'height'),
+               Output('initial_game_videop', 'width')],
               [Input('url', 'pathname'),
                Input('start_gamep_singlea', 'n_clicks')])
 def pong_singleactions(page, buttonclick):
@@ -336,14 +343,19 @@ def pong_singleactions(page, buttonclick):
         video.release()
         videom =open(filename, 'rb').read()
         encoded_video= base64.b64encode(videom).decode()
-        return 'data:video/mp4;base64,{}'.format(encoded_video)
+        src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        height *= 1.5
+        width *= 1.5
+        return src, height, width
 
-@app.callback(Output('game_videop_allactions', 'src'),
+@app.callback([Output('game_videop_allactions', 'src'),
+               Output('game_videop_allactions', 'height'),
+               Output('game_videop_allactions', 'width')],
               [Input('url', 'pathname'),
                Input('start_gamep_alla', 'n_clicks')])
 def pong_allactions(page, buttonclick):
     if ('pong' in page) and buttonclick:
-        observations, fin_counter = player.main(dry_run=False, show_all_actions=True)
+        observations, fin_counter= player.main(dry_run=False, show_all_actions=True)
         filename='obs_video_pong_aa.webm'
         height = observations[0].shape[0]
         width = observations[0].shape[1]
@@ -354,9 +366,14 @@ def pong_allactions(page, buttonclick):
         video.release()
         videom =open(filename, 'rb').read()
         encoded_video= base64.b64encode(videom).decode()
-        return 'data:video/mp4;base64,{}'.format(encoded_video)
+        src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        height *= 1.5
+        width *= 1.5
+        return src, height, width
 
-@app.callback(Output('initial_game_videoc', 'src'),
+@app.callback([Output('initial_game_videoc', 'src'),
+               Output('initial_game_videoc', 'height'),
+               Output('initial_game_videoc', 'width')],
               [Input('url', 'pathname'),
                Input('start_gamec', 'n_clicks')])
 def carracing_allactions(page, buttonclick):
@@ -418,9 +435,14 @@ def carracing_allactions(page, buttonclick):
         videom = open(init_obs_seq_filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         print('send video to dashboard')
-        return 'data:video/webm;base64,{}'.format(encoded_video)
+        src = 'data:video/webm;base64,{}'.format(encoded_video)
+        height *= 1.5
+        width *=1.5
+        return src, height, width
 
-@app.callback(Output('initial_game_videob', 'src'),
+@app.callback([Output('initial_game_videob', 'src'),
+               Output('initial_game_videob', 'height'),
+               Output('initial_game_videob', 'width')],
               [Input('url','pathname'),
                Input('start_gameb', 'n_clicks')])
 def breakout_allactions(page, buttonclick):
@@ -475,7 +497,10 @@ def breakout_allactions(page, buttonclick):
         videom = open(init_obs_seq_filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         print('send video to dashboard')
-        return 'data:video/webm;base64,{}'.format(encoded_video)
+        src = 'data:video/webm;base64,{}'.format(encoded_video)
+        height *= 1.5
+        width *= 1.5
+        return src, height, width
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='0.0.0.0', port=1875)
