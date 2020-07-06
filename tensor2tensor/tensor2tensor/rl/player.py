@@ -114,7 +114,7 @@ flags.DEFINE_boolean("game_from_filenames", False,
                      "hparams.")
 flags.DEFINE_boolean('show_all_actions', True, 'Show all possible actions and their course')
 dry_run = False
-show_all_actions = True
+show_all_actions = False
 
 @registry.register_hparams
 def planner_small(): #todo adapt to tiny?
@@ -741,11 +741,11 @@ def main(dry_run=False, show_all_actions=False):
             if event.type ==pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT: #unten 5
                     time.sleep(1)
-                    obs, rew, env_done, info = env.step(np.array([5]))
+                    obs, rew, env_done, info = env.step(np.array([3]))
                     print('Keys down')
                 if event.key == pygame.K_RIGHT: #oben 2
                     time.sleep(1)
-                    obs, rew, env_done, info = env.step(np.array([4]))
+                    obs, rew, env_done, info = env.step(np.array([2]))
                     print('Keys up')
                 obsshow, obs4 = obs
                 display_arr(screen, obsshow, transpose=True, video_size=video_size)
@@ -798,8 +798,8 @@ def main(dry_run=False, show_all_actions=False):
           # rendered = env.render(mode='rgb_array')
           display_arr(screen, obsshow, transpose=True, video_size=video_size)
           observations.append(obsshow)
-          time.sleep(2)
           pygame.display.flip()
+          time.sleep(1)
 
           for event in pygame.event.get():  # ['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']
               if event.type == pygame.KEYDOWN:
@@ -842,22 +842,32 @@ def main(dry_run=False, show_all_actions=False):
               print('normalgamedone')
               # oben
               obs_up = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
-                            realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([4]))
+                            realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([2]))
               print('rightdone')
               # unten
               obs_down = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
-                            realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([5]))
+                            realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([3]))
               print('leftdone')
               break
       print('reseting')
       env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
-      obs_normal = np.array(obs_normal)
-      obs_up = np.array(obs_up)
-      obs_down = np.array(obs_down)
-      print('concatenating')
-      obs_total = np.concatenate((obs_up, obs_normal, obs_down), axis=2)
-      print(obs_total.shape[0], obs_total.shape[1], obs_total.shape[2])
-      lenframes = obs_total.shape[0]
+      try:
+          obs_normal = np.array(obs_normal)
+          obs_up = np.array(obs_up)
+          obs_down = np.array(obs_down)
+          print('concatenating')
+          obs_total = np.concatenate((obs_up, obs_normal, obs_down), axis=2)
+          print(obs_total.shape)
+          print(obs_total.shape[0], obs_total.shape[1], obs_total.shape[2])
+          lenframes = obs_total.shape[0]
+      except:
+          print('You didn\'t press the space button')
+          #obs_total = np.ones(shape=(50, 264,1440, 3), dtype=np.uint8)
+          #obs_total[:]=255
+          obs_total = np.array(observations)
+          height = obs_total.shape[1] *1.5
+          width = obs_total.shape[2] *1.5
+          lenframes = obs_total.shape[0]
       env.close()
       pygame.quit()
       return obs_total, lenframes
