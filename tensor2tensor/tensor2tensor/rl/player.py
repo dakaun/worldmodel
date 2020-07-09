@@ -112,8 +112,8 @@ flags.DEFINE_string("episodes_data_dir", "",
 flags.DEFINE_boolean("game_from_filenames", False,
                      "If infer game name from data_dir filenames or from "
                      "hparams.")
-flags.DEFINE_boolean('show_all_actions', True, 'Show all possible actions and their course')
-dry_run = False
+flags.DEFINE_boolean('show_all_actions', False, 'Show all possible actions and their course')
+dry_run = True
 show_all_actions = False
 
 @registry.register_hparams
@@ -703,7 +703,7 @@ def main(dry_run=False, show_all_actions=False):
   #    obs, rew, env_done, info = env.step(i%6)
   #    rendered = env.render(mode='rgb_array')
 
-  if FLAGS.dry_run or dry_run:
+  if FLAGS.dry_run or dry_run: #intervene with single action
     print('dry run')
     # build agent
     env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
@@ -723,12 +723,16 @@ def main(dry_run=False, show_all_actions=False):
     screen = pygame.display.set_mode(video_size)
 
     pong_human_sets_pause=False
-
+    manual_action = None
+    actions = None
     for _ in range(1):
       # teilweise von play.play kopiert
       observations = []
-      for i in range(20):
-        actions = agent.act(obs4, {})
+      for i in range(50):
+        if actions == None:
+            actions = agent.act(obs4, {})
+        else:
+            actions = manual_action
         print(actions)
         obs, rew, env_done, info = env.step(actions)
         obsshow, obs4 = obs
@@ -736,22 +740,36 @@ def main(dry_run=False, show_all_actions=False):
         observations.append(obsshow)
         time.sleep(2)
         pygame.display.flip()
+        actions = None
 
         for event in pygame.event.get(): #['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']
             if event.type ==pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT: #unten 5
                     time.sleep(1)
-                    obs, rew, env_done, info = env.step(np.array([3]))
+                    #manual_action = np.array([3])
+                    #obs, rew, env_done, info = env.step(np.array([3]))
                     print('Keys down')
+                    for i in range(2):
+                        obs, rew, env_done, info = env.step(np.array([3]))
+                        obsshow, obs4 = obs
+                        display_arr(screen, obsshow, transpose=True, video_size=video_size)
+                        pygame.display.flip()
                 if event.key == pygame.K_RIGHT: #oben 2
                     time.sleep(1)
-                    obs, rew, env_done, info = env.step(np.array([2]))
+                    #manual_action = np.array([2])
                     print('Keys up')
-                obsshow, obs4 = obs
-                display_arr(screen, obsshow, transpose=True, video_size=video_size)
-                observations.append(obsshow)
-                time.sleep(1)
-                pygame.display.flip()
+                    for i in range(2):
+                        obs, rew, env_done, info = env.step(np.array([2]))
+                        obsshow, obs4 = obs
+                        display_arr(screen, obsshow, transpose=True, video_size=video_size)
+                        pygame.display.flip()
+                if event.key == pygame.QUIT:
+                    done = True
+                #obsshow, obs4 = obs
+                #display_arr(screen, obsshow, transpose=True, video_size=video_size)
+                #observations.append(obsshow)
+                #time.sleep(1)
+                #pygame.display.flip()
              #   pong_human_sets_pause = not pong_human_sets_pause
 
         #if pong_human_sets_pause:
@@ -788,7 +806,7 @@ def main(dry_run=False, show_all_actions=False):
 
       # teilweise von play.play kopiert
       observations = []
-      for i in range(20):
+      for i in range(30):
           # observations: 4 stacked observations, shape: (1,4,105,80,3)
           actions = agent.act(obs4, {})
           print('for ', i, ' and action ', actions)
@@ -853,6 +871,7 @@ def main(dry_run=False, show_all_actions=False):
       env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
       try:
           obs_normal = np.array(obs_normal)
+          print(obs_normal.shape)
           obs_up = np.array(obs_up)
           obs_down = np.array(obs_down)
           print('concatenating')

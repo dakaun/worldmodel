@@ -237,7 +237,7 @@ pong = html.Div(id='header1',
                     html.Div(id='pong_run_in_worldmodel', children=[
                         html.H3(children='Dashboard to play Pong inside the word model.'),
                         html.Div(id='subbody2', children=[
-                            html.H5(['Press Button to run Pong and intervene with single actions.']),
+                            html.H5(['Press Button to run Pong and intervene with single actions. Intervene with the keys up and down. To go up press key left, and to got down press key right.']),
                             html.Button('Start Pong in World Model',
                                         id='start_gamep_singlea',
                                         n_clicks=0)
@@ -321,9 +321,19 @@ def pong_playing(page, buttonclick):
         encoded_video = base64.b64encode(videom).decode()
         print('send video to dashboard')
         src= 'data:video/mp4;base64,{}'.format(encoded_video)
-        height = 396
-        width = 720
+        height = 264
+        width = 480
         return src, height, width
+    else:
+        filename = "pong_playing.mp4"
+        videom = open('assets/'+ filename, 'rb').read()
+        encoded_video = base64.b64encode(videom).decode()
+        print('send video to dashboard')
+        src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        height = 264
+        width = 480
+        return src, height, width
+
 
 @app.callback([Output('initial_game_videop', 'src'),
                Output('initial_game_videop', 'height'),
@@ -344,8 +354,16 @@ def pong_singleactions(page, buttonclick):
         videom =open(filename, 'rb').read()
         encoded_video= base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
-        height *= 1.5
-        width *= 1.5
+        height *= 2
+        width *= 2
+        return src, height, width
+    else:
+        filename = 'pong_singleaction.webm'
+        videom = open('assets/' + filename, 'rb').read()
+        encoded_video = base64.b64encode(videom).decode()
+        src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        height = 264
+        width = 480
         return src, height, width
 
 @app.callback([Output('game_videop_allactions', 'src'),
@@ -357,6 +375,7 @@ def pong_allactions(page, buttonclick):
     if ('pong' in page) and buttonclick:
         observations, fin_counter= player.main(dry_run=False, show_all_actions=True)
         filename='obs_video_pong_aa.webm'
+        print(observations.shape)
         height = observations[0].shape[0]
         width = observations[0].shape[1]
         observations = observations[:, :, :, [2, 1, 0]]
@@ -368,7 +387,17 @@ def pong_allactions(page, buttonclick):
         encoded_video= base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
         height *= 1.5
+        print('height ', height)
         width *= 1.5
+        print('width ', width)
+        return src, height, width
+    else:
+        filename = 'pong_allactions.webm'
+        videom = open('assets/' + filename, 'rb').read()
+        encoded_video = base64.b64encode(videom).decode()
+        src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        height = 198
+        width = 1080
         return src, height, width
 
 @app.callback([Output('initial_game_videoc', 'src'),
