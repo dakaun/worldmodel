@@ -220,52 +220,135 @@ pong = html.Div(id='header1',
                     html.H2(children='Interact with the Agent inside the World Model'),
                     html.Div(id='playing_pong', children=[
                         html.H3(children='Dashboard to play Pong inside the word model.'),
-                        html.Div(id='subbody', children=[
-                            html.H5(['Press Button to play Pong.']),
-                            html.Button('Start to play Pong',
-                                        id='start_play_gamep',
-                                        n_clicks=0)
-                            ]),
+                        html.Div(children=[
+                            html.Div(children=[
+                                html.P(['Press Button to play Pong:']),
+                                html.Button('Start to play Pong',
+                                            id='start_play_gamep',
+                                            n_clicks=0)
+                                ],
+                                className='button-cluster'
+                                # style={
+                                #     'display': 'inline-block',
+                                #     'vertical-align':'top'
+                                # }
+                                ),
+                            # html.Div(children=[
+                            #     dcc.Checklist(id='checklist_playingpong',
+                            #         options=[
+                            #             {'label': 'Only World Model', 'value': 'world_model'},
+                            #             {'label': 'Compare World Model with Real Environment', 'value': 'wm_realenv'}
+                            #         ],
+                            #         value=['wm_realenv'],
+                            #         labelStyle={'display': 'block'}
+                            #     )
+                            # ],
+                            #     style={
+                            #         'width': '49%',
+                            #         'display': 'inline-block'
+                            #     }
+                            # ),
+                            dcc.Markdown('''
+                            Keys to Play:
+                            
+                            **A**: Down, **S**: Up
+                            
+                            Special Keys: **N**: Perform NOOP, **R**: Key to reset env  
+                            **X**: Reset simulated Env,  
+                            **C**: Key to change between real-time-play and wait-for-pressed-key
+                            ''',
+                                className='key-descr-cluster'
+                                # style={
+                                #     'display': 'inline-block'
+                                # }
+                                )
+                            ],
+                            className='descrip-cluster'
+                        ),
                         html.Video(id='playing_gamep',
                                    controls=True,
-                                   style={
-                                       'textAlign': 'center'
-                                       },
                                    height=396,
-                                   width=720)
-                        ]),
+                                   width=720,
+                                   className='video-cluster')
+                    ],
+                             className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel', children=[
                         html.H3(children='Dashboard to play Pong inside the word model.'),
-                        html.Div(id='subbody2', children=[
-                            html.H5(['Press Button to run Pong and intervene with single actions. Intervene with the keys up and down. To go up press key left, and to got down press key right.']),
-                            html.Button('Start Pong in World Model',
-                                        id='start_gamep_singlea',
-                                        n_clicks=0)
-                            ]),
+                        html.Div(children=[
+                            html.Div(children=[
+                                html.P(['Press Button to run Pong and intervene with single actions:']),
+                                html.Button('Start Pong in World Model',
+                                            id='start_gamep_singlea',
+                                            n_clicks=0)
+                                ],
+                                className='button-cluster'),
+                            # html.Div(children=[
+                            #     dcc.Checklist(id='checklist_pongsinglea',
+                            #         options=[
+                            #             {'label': 'Only World Model', 'value': 'world_model'},
+                            #             {'label': 'Compare World Model with Real Environment', 'value': 'wm_realenv'}
+                            #         ],
+                            #         value=['wm_realenv'],
+                            #         labelStyle={'display': 'block'}
+                            #     )
+                            # ],
+                            #     style={
+                            #         'width': '49%',
+                            #         'display': 'inline-block'
+                            #     }),
+                            dcc.Markdown('''
+                            Keys to Play:
+                            
+                            **Key Left**: Up, **Key Right**: Down
+                            ''',
+                                className='key-descr-cluster'),
+                            ],
+                            className='descrip-cluster'
+                        ),
                         html.Video(id='initial_game_videop',
                                    controls=True,
-                                   style={
-                                       'textAlign': 'center'
-                                       },
                                    height=396,
-                                   width=720)
-                        ]),
+                                   width=720,
+                                   className='video-cluster')
+                    ],
+                        className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel_showallactions', children=[
-                        html.H3(children='Dashboard to play Pong inside the word model and show all actions after pausing Game.'),
-                        html.Div(id='subbody3', children=[
-                            html.H5(['Press Button to run Pong and see all available actions after pausing.']),
-                            html.Button('Start Pong in World Model',
-                                        id='start_gamep_alla',
-                                        n_clicks=0)
-                            ]),
+                        html.H3(
+                            children='Dashboard to play Pong inside the word model and show all actions after pausing Game.'),
+                        html.Div(children=[
+                            html.Div(children=[
+                                html.P(['Press Button to run Pong and see all available actions after pausing:']),
+                                html.Button('Start Pong in World Model',
+                                            id='start_gamep_alla',
+                                            n_clicks=0)
+                            ],
+                                style={
+                                    'width': '49%',
+                                    'display': 'inline-block'
+                                }),
+                            # hier kommt Markdown hin für Description
+                        ]),
+                        # html.Div(children=[
+                        #     dcc.Checklist(id='checklist_pongalla',
+                        #         options=[
+                        #             {'label': 'Only World Model', 'value': 'world_model'},
+                        #             {'label': 'Compare World Model with Real Environment', 'value': 'wm_realenv'}
+                        #         ],
+                        #         value=['wm_realenv'],
+                        #         labelStyle={'display': 'block'}
+                        #     )
+                        # ],
+                        #     style={
+                        #         'width': '49%',
+                        #         'display': 'inline-block'
+                        #     }),
                         html.Video(id='game_videop_allactions',
                                    controls=True,
-                                   style={
-                                       'textAlign': 'center'
-                                       },
                                    height=264,
-                                   width=1440)
-                        ])
+                                   width=1440,
+                                   className='video-cluster')
+                    ],
+                            className='ponggame_cluster')
                 ])
 
 overview = html.Div(id='header1',

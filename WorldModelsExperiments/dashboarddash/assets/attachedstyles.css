@@ -1,3 +1,51 @@
 body {
     background-color: LightGrey;
 }
+
+.button-cluster {
+    vertical-align: text-top;
+    border-style: dotted;
+    float:left;
+    width: 49%;
+    height:170px;
+    margin-right: 0px;
+    display: inline-block;
+    position: relativ;
+    margin-left:20%;
+}
+
+.key-descr-cluster {
+    border-style: dotted;
+    float:right;
+    width:49%;
+    height:170px;
+    margin-left: 0px;
+    display: inline-block;
+    position:relativ;
+    margin-right:20%;
+}
+
+.descrip-cluster {
+    align:center;
+    width:80%
+    border-style: dashed;
+    background-color: Red;
+    display:flex;
+}
+
+.video-cluster {
+    padding: 10px;
+    border-style: solid;
+}
+
+.ponggame_cluster {
+    background-color: #C0C0C0;
+    border-radius: 10px;
+    box-shadow:2px 2px 3px darkgray;
+    position: relativ;
+    margin-right: 40px;
+    margin-left: 40px;
+    border-style: double;
+}
+
+
