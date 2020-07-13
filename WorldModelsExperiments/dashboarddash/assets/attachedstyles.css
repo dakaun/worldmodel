@@ -7,7 +7,7 @@ body {
     border-style: dotted;
     float:left;
     width: 49%;
-    height:170px;
+    height:180px;
     margin-right: 0px;
     display: inline-block;
     position: relativ;
@@ -18,7 +18,7 @@ body {
     border-style: dotted;
     float:right;
     width:49%;
-    height:170px;
+    height:180px;
     margin-left: 0px;
     display: inline-block;
     position:relativ;
@@ -27,7 +27,7 @@ body {
 
 .descrip-cluster {
     align:center;
-    width:80%
+    width:60%
     border-style: dashed;
     background-color: Red;
     display:flex;
@@ -43,9 +43,9 @@ body {
     border-radius: 10px;
     box-shadow:2px 2px 3px darkgray;
     position: relativ;
-    margin-right: 40px;
-    margin-left: 40px;
+    margin:auto;
     border-style: double;
+    width:1300px;
 }
 
 

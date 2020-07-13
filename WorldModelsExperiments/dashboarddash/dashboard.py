@@ -251,9 +251,9 @@ pong = html.Div(id='header1',
                             dcc.Markdown('''
                             Keys to Play:
                             
-                            **A**: Down, **S**: Up
-                            
-                            Special Keys: **N**: Perform NOOP, **R**: Key to reset env  
+                            **A**: Down, **S**: Up  
+                            **N**: Perform NOOP,  
+                            **R**: Key to reset env  
                             **X**: Reset simulated Env,  
                             **C**: Key to change between real-time-play and wait-for-pressed-key
                             ''',
@@ -297,9 +297,10 @@ pong = html.Div(id='header1',
                             #         'display': 'inline-block'
                             #     }),
                             dcc.Markdown('''
-                            Keys to Play:
+                            Keys to Intervene:
                             
-                            **Key Left**: Up, **Key Right**: Down
+                            **Key Left**: Up,  
+                            **Key Right**: Down
                             ''',
                                 className='key-descr-cluster'),
                             ],
