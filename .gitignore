@@ -3,6 +3,7 @@
 *.png
 *.webm
 *.json
+*.avi
 
 WorldModelsExperiments/breakout/log/*
 WorldModelsExperiments/breakout/record/*
