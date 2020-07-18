@@ -251,7 +251,7 @@ pong = html.Div(id='header1',
                             dcc.Markdown('''
                             Keys to Play:
                             
-                            **A**: Down, **S**: Up  
+                            **A**: Down, **D**: Up  
                             **N**: Perform NOOP,  
                             **R**: Key to reset env  
                             **X**: Reset simulated Env,  
@@ -299,8 +299,10 @@ pong = html.Div(id='header1',
                             dcc.Markdown('''
                             Keys to Intervene:
                             
-                            **Key Left**: Up,  
-                            **Key Right**: Down
+                            **A**: Down, **D**: Up
+                            **N**: Perform NOOP,  
+                            **R**: Key to reset env  
+                            **X**: Reset simulated Env,
                             ''',
                                 className='key-descr-cluster'),
                             ],
@@ -318,17 +320,22 @@ pong = html.Div(id='header1',
                             children='Dashboard to play Pong inside the word model and show all actions after pausing Game.'),
                         html.Div(children=[
                             html.Div(children=[
-                                html.P(['Press Button to run Pong and see all available actions after pausing:']),
+                                html.P(['Press Button to run Pong and pause to see all available actions:']),
                                 html.Button('Start Pong in World Model',
                                             id='start_gamep_alla',
                                             n_clicks=0)
+                                ],
+                                className='button-cluster'),
+                            dcc.Markdown('''
+                            Keys to Intervene:
+                            
+                            **Space**: Pause
+                            ''',
+                                         className='key-descr-cluster'),
                             ],
-                                style={
-                                    'width': '49%',
-                                    'display': 'inline-block'
-                                }),
+                            className='descrip-cluster'
                             # hier kommt Markdown hin für Description
-                        ]),
+                        ),
                         # html.Div(children=[
                         #     dcc.Checklist(id='checklist_pongalla',
                         #         options=[
@@ -616,4 +623,4 @@ def breakout_allactions(page, buttonclick):
         return src, height, width
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=1875)
+    app.run_server(debug=True, host='0.0.0.0', port=1874)

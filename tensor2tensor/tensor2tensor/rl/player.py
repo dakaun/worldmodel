@@ -113,7 +113,7 @@ flags.DEFINE_boolean("game_from_filenames", False,
                      "If infer game name from data_dir filenames or from "
                      "hparams.")
 flags.DEFINE_boolean('show_all_actions', False, 'Show all possible actions and their course')
-dry_run = False
+dry_run = True
 show_all_actions = False
 
 @registry.register_hparams
@@ -650,7 +650,7 @@ def resume_game(agent, env, screen, observations, simenv_pvar, simenv_var, reale
     #pygame.quit()
     return observations
 
-def main(dry_run=False, show_all_actions=False):
+def main(_):#dry_run=False, show_all_actions=False):
   # gym.logger.set_level(gym.logger.DEBUG)
   hparams = registry.hparams(FLAGS.loop_hparams_set) # add planner_small
   hparams.parse(FLAGS.loop_hparams)
@@ -722,13 +722,16 @@ def main(dry_run=False, show_all_actions=False):
     video_size = int(video_size[0] * zoom), int(video_size[1] * zoom)
     screen = pygame.display.set_mode(video_size)
 
+    clock = pygame.time.Clock()
+    pygame.display.init()
     pong_human_sets_pause=False
     manual_action = None
     actions = None
+    env_done = False
     for _ in range(1):
       # teilweise von play.play kopiert
       observations = []
-      for i in range(50):
+      while not env_done:
         if actions == None:
             actions = agent.act(obs4, {})
         else:
@@ -738,23 +741,24 @@ def main(dry_run=False, show_all_actions=False):
         obsshow, obs4 = obs
         display_arr(screen, obsshow, transpose=True, video_size=video_size)
         observations.append(obsshow)
-        time.sleep(2)
+        time.sleep(1)
         pygame.display.flip()
+        clock.tick(FLAGS.fps)
         actions = None
 
         for event in pygame.event.get(): #['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']
             if event.type ==pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT: #unten 5
+                print(event.key)
+                if event.key == 97: # DOWN : A
                     time.sleep(1)
                     #manual_action = np.array([3])
-                    #obs, rew, env_done, info = env.step(np.array([3]))
                     print('Keys down')
                     for i in range(2):
                         obs, rew, env_done, info = env.step(np.array([3]))
                         obsshow, obs4 = obs
                         display_arr(screen, obsshow, transpose=True, video_size=video_size)
                         pygame.display.flip()
-                if event.key == pygame.K_RIGHT: #oben 2
+                elif event.key == 100: # UP : D
                     time.sleep(1)
                     #manual_action = np.array([2])
                     print('Keys up')
@@ -763,19 +767,25 @@ def main(dry_run=False, show_all_actions=False):
                         obsshow, obs4 = obs
                         display_arr(screen, obsshow, transpose=True, video_size=video_size)
                         pygame.display.flip()
-                if event.key == pygame.QUIT:
-                    done = True
-                #obsshow, obs4 = obs
-                #display_arr(screen, obsshow, transpose=True, video_size=video_size)
-                #observations.append(obsshow)
-                #time.sleep(1)
-                #pygame.display.flip()
-             #   pong_human_sets_pause = not pong_human_sets_pause
-
-        #if pong_human_sets_pause:
-        #    print('HERE')
-        #    time.sleep(2)
-        #    pong_human_sets_pause = False
+                elif event.key == 120: # RESET SIM_ENV : X
+                    time.sleep(1)
+                    obs, rew, env_done, info = env.step(110)
+                    obsshow, obs4 = obs
+                elif event.key == 114: # RESET ENV : R
+                    time.sleep(1)
+                    obsshow, obs4 = env.reset()
+                    rew = 0
+                    info = {}
+                elif event.key == 110: # NOOP : N
+                    time.sleep(1)
+                    print('NOOP')
+                    for i in range(2):
+                        obs, rew, env_done, info = env.step(103)
+                        obsshow, obs4 = obs
+                        display_arr(screen, obsshow, transpose=True, video_size=video_size)
+                        pygame.display.flip()
+            elif event.type == pygame.QUIT:
+                env_done = True
 
       env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
     observations = np.array(observations)
