@@ -113,7 +113,7 @@ flags.DEFINE_boolean("game_from_filenames", False,
                      "If infer game name from data_dir filenames or from "
                      "hparams.")
 flags.DEFINE_boolean('show_all_actions', False, 'Show all possible actions and their course')
-dry_run = True
+dry_run = False
 show_all_actions = False
 
 @registry.register_hparams
@@ -232,7 +232,7 @@ class PlayerEnv(gym.Env):
     # Special codes
     if type(action)== np.ndarray:
         action = int(action)
-    if action in self._player_actions():
+    if action in self._player_actions(): # 101: SimAndRealEnvPlayer._player_return_done_action, 102: PlayerEnv._player_toggle_wait_action, 110: SimAndRealEnvPlayer.player_restart_simulated_env_action
       envs_step_tuples = self._player_actions()[action]()
     elif self._wait and action == self.name_to_action_num["NOOP"]:
       # Ignore no-op, do not pass to environment.
