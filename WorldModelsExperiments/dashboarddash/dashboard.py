@@ -193,7 +193,7 @@ carracing = html.Div(id='header1',
                       },
                       children=[
                           html.H1(children='CarRacing World Model'),
-                          html.H3(children='Dashboard to display word model of CarRacing.'),
+                          html.H3(children='Dashboard to display Word Model of CarRacing.'),
                           html.Div(id='subbody', children=[
                               html.H5(['Press Button to run CarRacing.']),
                               html.Button('Start CarRacing',
@@ -216,10 +216,10 @@ pong = html.Div(id='header1',
                     'background-color': 'LightGray'
                 },
                 children=[
-                    html.H1(children='Pong World Model'),
-                    html.H2(children='Interact with the Agent inside the World Model'),
+                    html.H1(children='Explaining Reinforcement Learning through its World Model'),
+                    html.H2(children='Interact with the Pong World Model of Kaiser et al. (2019)'),
                     html.Div(id='playing_pong', children=[
-                        html.H3(children='Dashboard to play Pong inside the word model.'),
+                        html.H3(children='Dashboard to play Pong inside the Word Model.'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to play Pong:']),
@@ -273,7 +273,7 @@ pong = html.Div(id='header1',
                     ],
                              className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel', children=[
-                        html.H3(children='Dashboard to play Pong inside the word model.'),
+                        html.H3(children='Dashboard to play Pong inside the Word Model.'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to run Pong and intervene with single actions:']),
@@ -317,7 +317,7 @@ pong = html.Div(id='header1',
                         className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel_showallactions', children=[
                         html.H3(
-                            children='Dashboard to play Pong inside the word model and show all actions after pausing Game.'),
+                            children='Dashboard to play Pong inside the Word Model and show all actions after pausing Game.'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to run Pong and pause to see all available actions:']),
