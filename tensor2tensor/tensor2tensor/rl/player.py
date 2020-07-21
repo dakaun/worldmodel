@@ -650,7 +650,7 @@ def resume_game(agent, env, screen, observations, simenv_pvar, simenv_var, reale
     #pygame.quit()
     return observations
 
-def main(_):#dry_run=False, show_all_actions=False):
+def main(dry_run=False, show_all_actions=False):
   # gym.logger.set_level(gym.logger.DEBUG)
   hparams = registry.hparams(FLAGS.loop_hparams_set) # add planner_small
   hparams.parse(FLAGS.loop_hparams)
