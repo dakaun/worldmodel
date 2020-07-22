@@ -219,7 +219,7 @@ pong = html.Div(id='header1',
                     html.H1(children='Explaining Reinforcement Learning through its World Model'),
                     html.H2(children='Interact with the Pong World Model of Kaiser et al. (2019)'),
                     html.Div(id='playing_pong', children=[
-                        html.H3(children='Dashboard to play Pong inside the Word Model.'),
+                        html.H3(children='Dashboard to play Pong inside the World Model.'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to play Pong:']),
@@ -273,7 +273,7 @@ pong = html.Div(id='header1',
                     ],
                              className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel', children=[
-                        html.H3(children='Dashboard to play Pong inside the Word Model.'),
+                        html.H3(children='Dashboard to play Pong inside the World Model.'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to run Pong and intervene with single actions:']),
@@ -317,7 +317,7 @@ pong = html.Div(id='header1',
                         className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel_showallactions', children=[
                         html.H3(
-                            children='Dashboard to play Pong inside the Word Model and show all actions after pausing Game.'),
+                            children='Dashboard to play Pong inside the World Model and show all actions after pausing Game.'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to run Pong and pause to see all available actions:']),
@@ -405,10 +405,9 @@ def pong_playing(page, buttonclick):
         filelist.sort()
         for file in filelist:
             print(file)
-            if file.endswith('.mp4'): filename.append(file)
+            if file.endswith('1.mp4'): filename.append(file)
         print('open video file')
-        print(filename[1])
-        videom = open('gym-results/' + filename[1], 'rb').read()
+        videom = open('gym-results/' + filename[0], 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         print('send video to dashboard')
         src= 'data:video/mp4;base64,{}'.format(encoded_video)
