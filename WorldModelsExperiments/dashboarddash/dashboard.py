@@ -218,6 +218,22 @@ pong = html.Div(id='header1',
                 children=[
                     html.H1(children='Explaining Reinforcement Learning through its World Model'),
                     html.H2(children='Interact with the Pong World Model of Kaiser et al. (2019)'),
+                    dcc.Markdown('''
+                    This dashboard presents different possibilities to interact with the world model to generate explanations.
+                    The games enable to play and thus learn the limits of the world model.
+                    The overall aim is to gain an understanding of the world model and develop trust.
+                    
+                    There three different kind of explorations given:  
+                    
+                    1. Fully play inside the world model and decide each action of the agent - no agent is trained.  
+                    2. Both, the world model as well as agent are trained. The user can intervene single actions and observe the reactions.    
+                    3. Again, both components are trained. The user can pause the game to display all possible actions from there.
+                    
+                    The interface of the game shows three images (from left to right): the world model, the real 
+                    environment and the difference between the world model to the real environment.  
+                    The panel at the top shows the following additional information: c - reward, r - reward of the current frame,
+                    fc - counter of the frames. 
+                    '''),
                     html.Div(id='playing_pong', children=[
                         html.H3(children='Dashboard to play Pong inside the World Model.'),
                         html.Div(children=[
