@@ -84,7 +84,7 @@ import tensorflow as tf
 flags = tf.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string("video_dir", "../../../WorldModelsExperiments/dashboarddash/gym-results",
+flags.DEFINE_string("video_dir", "gym-results/",
                     "Where to save played trajectories.")
 flags.DEFINE_float("zoom", 3,
                    "Resize factor of displayed game.")
@@ -113,7 +113,7 @@ flags.DEFINE_boolean("game_from_filenames", False,
                      "If infer game name from data_dir filenames or from "
                      "hparams.")
 flags.DEFINE_boolean('show_all_actions', False, 'Show all possible actions and their course')
-dry_run = True
+dry_run = False
 show_all_actions = False
 
 @registry.register_hparams
