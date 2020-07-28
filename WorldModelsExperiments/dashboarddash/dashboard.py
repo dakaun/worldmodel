@@ -11,7 +11,6 @@ import numpy as np
 from pyglet.window import key
 import time
 import cv2
-import gym
 import os
 
 import sys
@@ -165,7 +164,7 @@ breakout = html.Div(id='header1',
                           'background-color': 'LightGray'
                       },
                       children=[
-                          html.H1(children='Breakout Word Model'),
+                          html.H1(children='Breakout World Model'),
                           html.H3(children='Dashboard to display the world model of breakout.'),
                           html.Div(id='subbody', children=[
                               html.H5(['Press the Button to run Breakout.']),
@@ -231,7 +230,7 @@ pong = html.Div(id='header1',
                     
                     The interface of the game shows three images (from left to right): the world model, the real 
                     environment and the difference between the world model to the real environment.  
-                    The panel at the top shows the following additional information: c - reward, r - reward of the current frame,
+                    The panel at the top shows the following additional information: c - cumulative reward, r - reward of the current frame,
                     fc - counter of the frames. 
                     '''),
                     html.Div(id='playing_pong', children=[
@@ -244,26 +243,7 @@ pong = html.Div(id='header1',
                                             n_clicks=0)
                                 ],
                                 className='button-cluster'
-                                # style={
-                                #     'display': 'inline-block',
-                                #     'vertical-align':'top'
-                                # }
                                 ),
-                            # html.Div(children=[
-                            #     dcc.Checklist(id='checklist_playingpong',
-                            #         options=[
-                            #             {'label': 'Only World Model', 'value': 'world_model'},
-                            #             {'label': 'Compare World Model with Real Environment', 'value': 'wm_realenv'}
-                            #         ],
-                            #         value=['wm_realenv'],
-                            #         labelStyle={'display': 'block'}
-                            #     )
-                            # ],
-                            #     style={
-                            #         'width': '49%',
-                            #         'display': 'inline-block'
-                            #     }
-                            # ),
                             dcc.Markdown('''
                             Keys to Play:
                             
@@ -274,9 +254,6 @@ pong = html.Div(id='header1',
                             **C**: Key to change between real-time-play and wait-for-pressed-key
                             ''',
                                 className='key-descr-cluster'
-                                # style={
-                                #     'display': 'inline-block'
-                                # }
                                 )
                             ],
                             className='descrip-cluster'
@@ -285,9 +262,12 @@ pong = html.Div(id='header1',
                                    controls=True,
                                    height=396,
                                    width=720,
-                                   className='video-cluster')
+                                   className='video-cluster'),
+                        html.Div(id='playing_gamep_descrip',
+                                 className='video-descrip')
                     ],
                              className='ponggame_cluster'),
+
                     html.Div(id='pong_run_in_worldmodel', children=[
                         html.H3(children='Dashboard to play Pong inside the World Model.'),
                         html.Div(children=[
@@ -298,20 +278,6 @@ pong = html.Div(id='header1',
                                             n_clicks=0)
                                 ],
                                 className='button-cluster'),
-                            # html.Div(children=[
-                            #     dcc.Checklist(id='checklist_pongsinglea',
-                            #         options=[
-                            #             {'label': 'Only World Model', 'value': 'world_model'},
-                            #             {'label': 'Compare World Model with Real Environment', 'value': 'wm_realenv'}
-                            #         ],
-                            #         value=['wm_realenv'],
-                            #         labelStyle={'display': 'block'}
-                            #     )
-                            # ],
-                            #     style={
-                            #         'width': '49%',
-                            #         'display': 'inline-block'
-                            #     }),
                             dcc.Markdown('''
                             Keys to Intervene:
                             
@@ -328,7 +294,9 @@ pong = html.Div(id='header1',
                                    controls=True,
                                    height=396,
                                    width=720,
-                                   className='video-cluster')
+                                   className='video-cluster'),
+                        html.Div(id='initial_game_videop_descrip',
+                                 className='video-descrip')
                     ],
                         className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel_showallactions', children=[
@@ -352,25 +320,13 @@ pong = html.Div(id='header1',
                             className='descrip-cluster'
                             # hier kommt Markdown hin für Description
                         ),
-                        # html.Div(children=[
-                        #     dcc.Checklist(id='checklist_pongalla',
-                        #         options=[
-                        #             {'label': 'Only World Model', 'value': 'world_model'},
-                        #             {'label': 'Compare World Model with Real Environment', 'value': 'wm_realenv'}
-                        #         ],
-                        #         value=['wm_realenv'],
-                        #         labelStyle={'display': 'block'}
-                        #     )
-                        # ],
-                        #     style={
-                        #         'width': '49%',
-                        #         'display': 'inline-block'
-                        #     }),
                         html.Video(id='game_videop_allactions',
                                    controls=True,
                                    height=264,
                                    width=1440,
-                                   className='video-cluster')
+                                   className='video-cluster'),
+                        html.Div(id='game_videop_allactions_descrip',
+                                 className='video-descrip')
                     ],
                             className='ponggame_cluster')
                 ])
@@ -407,29 +363,41 @@ def display_page(pathname):
 
 @app.callback([Output('playing_gamep', 'src'),
                Output('playing_gamep', 'height'),
-               Output('playing_gamep', 'width')],
+               Output('playing_gamep', 'width'),
+               Output('playing_gamep_descrip', 'children')],
               [Input('url', 'pathname'),
                Input('start_play_gamep', 'n_clicks')])
 def pong_playing(page, buttonclick):
     if ('pong' in page) and buttonclick:
         print('start playing game')
-        player.main(dry_run=False)
+        total_reward = player.main(dry_run=False)
         print('game played')
-        filename =[]
-        print('list files in dir')
-        filelist = os.listdir('gym-results')
-        filelist.sort()
-        for file in filelist:
-            print(file)
-            if file.endswith('1.mp4'): filename.append(file)
-        print('open video file')
-        videom = open('gym-results/' + filename[0], 'rb').read()
-        encoded_video = base64.b64encode(videom).decode()
-        print('send video to dashboard')
-        src= 'data:video/mp4;base64,{}'.format(encoded_video)
+        try:
+            filename =[]
+            print('list files in dir')
+            filelist = os.listdir('gym-results')
+            filelist.sort()
+            for file in filelist:
+                print(file)
+                if file.endswith('1.mp4'): filename.append(file)
+            print('open video file')
+            videom = open('gym-results/' + filename[0], 'rb').read()
+            encoded_video = base64.b64encode(videom).decode()
+            print('send video to dashboard')
+            src= 'data:video/mp4;base64,{}'.format(encoded_video)
+            children = 'Game well played with a total reward of ', str(
+                total_reward), '. The Video of your game is displayed here.'
+        except:
+            filename = "pong_playing.mp4"
+            videom = open('assets/' + filename, 'rb').read()
+            encoded_video = base64.b64encode(videom).decode()
+            print('send video to dashboard')
+            src = 'data:video/mp4;base64,{}'.format(encoded_video)
+            children = 'Game well played with a total reward of ', str(
+                total_reward), '. But the Video couldn\'t be saved.'
         height = 264
         width = 480
-        return src, height, width
+        return src, height, width, children
     else:
         filename = "pong_playing.mp4"
         videom = open('assets/'+ filename, 'rb').read()
@@ -438,17 +406,19 @@ def pong_playing(page, buttonclick):
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
         height = 264
         width = 480
-        return src, height, width
+        children = ""
+        return src, height, width, children
 
 
 @app.callback([Output('initial_game_videop', 'src'),
                Output('initial_game_videop', 'height'),
-               Output('initial_game_videop', 'width')],
+               Output('initial_game_videop', 'width'),
+               Output('initial_game_videop_descrip', 'children')],
               [Input('url', 'pathname'),
                Input('start_gamep_singlea', 'n_clicks')])
 def pong_singleactions(page, buttonclick):
     if ('pong' in page) and buttonclick:
-        observations, fin_counter = player.main(dry_run=True)
+        observations, fin_counter, total_reward = player.main(dry_run=True)
         filename='obs_video_pong_sa.webm'
         height = observations[0].shape[0]
         width = observations[0].shape[1]
@@ -460,26 +430,29 @@ def pong_singleactions(page, buttonclick):
         videom =open(filename, 'rb').read()
         encoded_video= base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        children = "The Agent achieved a total reward of ", str(total_reward), ". The Video of your game is displayed here."
         height *= 2
         width *= 2
-        return src, height, width
+        return src, height, width, children
     else:
         filename = 'pong_singleaction.webm'
         videom = open('assets/' + filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        children = ""
         height = 264
         width = 480
-        return src, height, width
+        return src, height, width, children
 
 @app.callback([Output('game_videop_allactions', 'src'),
                Output('game_videop_allactions', 'height'),
-               Output('game_videop_allactions', 'width')],
+               Output('game_videop_allactions', 'width'),
+               Output('game_videop_allactions_descrip', 'children')],
               [Input('url', 'pathname'),
                Input('start_gamep_alla', 'n_clicks')])
 def pong_allactions(page, buttonclick):
     if ('pong' in page) and buttonclick:
-        observations, fin_counter= player.main(dry_run=False, show_all_actions=True)
+        observations, fin_counter, (trewardu, trewardn, trewardd)= player.main(dry_run=False, show_all_actions=True)
         filename='obs_video_pong_aa.webm'
         print(observations.shape)
         height = observations[0].shape[0]
@@ -492,19 +465,21 @@ def pong_allactions(page, buttonclick):
         videom =open(filename, 'rb').read()
         encoded_video= base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        children = "The foils achieved the following reward in the game: Action up: ", trewardu, " Action noop: ", trewardn, " Action down: ", trewardd
         height *= 1.5
         print('height ', height)
         width *= 1.5
         print('width ', width)
-        return src, height, width
+        return src, height, width, children
     else:
         filename = 'pong_allactions.webm'
         videom = open('assets/' + filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
+        children = ""
         height = 198
         width = 1080
-        return src, height, width
+        return src, height, width, children
 
 @app.callback([Output('initial_game_videoc', 'src'),
                Output('initial_game_videoc', 'height'),
@@ -638,4 +613,4 @@ def breakout_allactions(page, buttonclick):
         return src, height, width
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=1875)
+    app.run_server(debug=True, host='0.0.0.0', port=1874)

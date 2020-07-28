@@ -4,7 +4,7 @@ body {
 
 .button-cluster {
     vertical-align: text-top;
-    border-style: dotted;
+    #border-style: dotted;
     float:left;
     width: 49%;
     height:180px;
@@ -16,7 +16,7 @@ body {
 }
 
 .key-descr-cluster {
-    border-style: dotted;
+    #border-style: dotted;
     float:right;
     width:49%;
     height:180px;
@@ -30,15 +30,15 @@ body {
 .descrip-cluster {
     align:center;
     width:60%
-    border-style: dashed;
-    background-color: Red;
+    #border-style: dashed;
+    #background-color: Red;
     display:flex;
     position:relativ;
 }
 
 .video-cluster {
     padding: 10px;
-    border-style: solid;
+    #border-style: solid;
 }
 
 .ponggame_cluster {
@@ -47,7 +47,7 @@ body {
     box-shadow:2px 2px 3px darkgray;
     position: relativ;
     margin:auto;
-    border-style: double;
+    #border-style: double;
     width:1300px;
     position:relativ;
 }

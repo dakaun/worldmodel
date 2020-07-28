@@ -52,11 +52,12 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
+sys.path.append('../../../gym')
 import gym
 from gym.utils import play
 import numpy as np
 
-import sys
 sys.path.append('../../../tensor2tensor')
 import tensor2tensor
 import pygame
@@ -114,7 +115,7 @@ flags.DEFINE_boolean("game_from_filenames", False,
                      "hparams.")
 flags.DEFINE_boolean('show_all_actions', False, 'Show all possible actions and their course')
 dry_run = False
-show_all_actions = False
+show_all_actions = True
 
 @registry.register_hparams
 def planner_small(): #todo adapt to tiny?
@@ -625,7 +626,8 @@ def resume_game(agent, env, screen, observations, simenv_pvar, simenv_var, reale
     env.cumulative_real_reward = pause_reward['simr']
 
     obs4, obsshow = pauseobs
-    appendend_obs = []
+    for i in range(5):
+        observations.append(np.zeros(shape=(132,240,3), dtype=np.uint8))
 
     video_size = [obsshow.shape[1], obsshow.shape[0]]
     zoom = 3
@@ -635,20 +637,22 @@ def resume_game(agent, env, screen, observations, simenv_pvar, simenv_var, reale
     obsshow, obs4 = obs
     observations.append(obsshow)
 
-    for i in range(5):
+    tot_reward = 0
+    for i in range(10):
         # observations: 4 stacked observations, shape: (1,4,105,80,3)
         actions = agent.act(obs4, {})
         print(actions)
         obs, rew, env_done, info = env.step(actions)
+        tot_reward += rew
         obsshow, obs4 = obs
         # rendered = env.render(mode='rgb_array')
         #display_arr(screen, obsshow, transpose=True, video_size=video_size)
         observations.append(obsshow)
-        time.sleep(2)
+        time.sleep(0.5)
         #pygame.display.flip()
     env.close()
     #pygame.quit()
-    return observations
+    return observations, tot_reward
 
 def main(dry_run=False, show_all_actions=False):
   # gym.logger.set_level(gym.logger.DEBUG)
@@ -728,6 +732,7 @@ def main(dry_run=False, show_all_actions=False):
     manual_action = None
     actions = None
     env_done = False
+    total_reward = 0
     for _ in range(1):
       # teilweise von play.play kopiert
       observations = []
@@ -738,6 +743,7 @@ def main(dry_run=False, show_all_actions=False):
             actions = manual_action
         print(actions)
         obs, rew, env_done, info = env.step(actions)
+        total_reward += rew
         obsshow, obs4 = obs
         display_arr(screen, obsshow, transpose=True, video_size=video_size)
         observations.append(obsshow)
@@ -755,6 +761,7 @@ def main(dry_run=False, show_all_actions=False):
                     print('Keys down')
                     for i in range(2):
                         obs, rew, env_done, info = env.step(np.array([3]))
+                        total_reward += rew
                         obsshow, obs4 = obs
                         display_arr(screen, obsshow, transpose=True, video_size=video_size)
                         pygame.display.flip()
@@ -764,6 +771,7 @@ def main(dry_run=False, show_all_actions=False):
                     print('Keys up')
                     for i in range(2):
                         obs, rew, env_done, info = env.step(np.array([2]))
+                        total_reward += rew
                         obsshow, obs4 = obs
                         display_arr(screen, obsshow, transpose=True, video_size=video_size)
                         pygame.display.flip()
@@ -781,6 +789,7 @@ def main(dry_run=False, show_all_actions=False):
                     print('NOOP')
                     for i in range(2):
                         obs, rew, env_done, info = env.step(103)
+                        total_reward += rew
                         obsshow, obs4 = obs
                         display_arr(screen, obsshow, transpose=True, video_size=video_size)
                         pygame.display.flip()
@@ -792,7 +801,7 @@ def main(dry_run=False, show_all_actions=False):
     lenframes = observations.shape[0]
     env.close()
     pygame.quit()
-    return observations, lenframes
+    return observations, lenframes, total_reward
   elif FLAGS.show_all_actions or show_all_actions: #press space and show all actions
       # build agent
       env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
@@ -816,18 +825,19 @@ def main(dry_run=False, show_all_actions=False):
 
       # teilweise von play.play kopiert
       observations = []
-      for i in range(30):
+      env_done = False
+      total_reward = 0
+      while not env_done:
           # observations: 4 stacked observations, shape: (1,4,105,80,3)
           actions = agent.act(obs4, {})
-          print('for ', i, ' and action ', actions)
-          #print(actions)
           obs, rew, env_done, info = env.step(actions)
+          total_reward += rew
           obsshow, obs4 = obs
-          # rendered = env.render(mode='rgb_array')
+
           display_arr(screen, obsshow, transpose=True, video_size=video_size)
           observations.append(obsshow)
           pygame.display.flip()
-          time.sleep(1)
+          time.sleep(0.5)
 
           for event in pygame.event.get():  # ['NOOP', 'FIRE', 'RIGHT', 'LEFT', 'RIGHTFIRE', 'LEFTFIRE']
               if event.type == pygame.KEYDOWN:
@@ -835,6 +845,10 @@ def main(dry_run=False, show_all_actions=False):
                       pong_human_pause = True
                       print('space angekommen')
                       # Save Game Status
+                  elif event.key == 120: # RESET SIM_ENV : X
+                      time.sleep(1)
+                      obs, rew, env_done, info = env.step(110)
+                      obsshow, obs4 = obs
           if pong_human_pause:
               simenv_pvar = {
                   'actions': env.sim_env.env.env.batch_env._actions_t,
@@ -865,16 +879,19 @@ def main(dry_run=False, show_all_actions=False):
               #resume game with different actions
               # normal
               print('resume game')
-              obs_normal = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
+              obs_normal, trewardn = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
                             realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([0]))
+              trewardn += total_reward
               print('normalgamedone')
               # oben
-              obs_up = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
+              obs_up, trewardu = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
                             realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([2]))
+              trewardu += total_reward
               print('rightdone')
               # unten
-              obs_down = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
+              obs_down, trewardd = resume_game(agent, env, screen, deepcopy(observations), simenv_pvar, simenv_var,
                             realenv_var, pauseobs, frame_counter, laststeptuples, pause_reward, np.array([3]))
+              trewardd += total_reward
               print('leftdone')
               break
       print('reseting')
@@ -899,10 +916,12 @@ def main(dry_run=False, show_all_actions=False):
           lenframes = obs_total.shape[0]
       env.close()
       pygame.quit()
-      return obs_total, lenframes
+      return obs_total, lenframes, (trewardu, trewardn, trewardd)
   else:
       env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
-      play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
+      total_reward = play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
+      env.close()
+      return total_reward
   env.close()
   print('env closed')
 
