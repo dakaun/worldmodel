@@ -5,6 +5,9 @@
 *.json
 *.avi
 
+tensor2tensor/tensor2tensor/rl/hero_wm_training
+tensor2tensor/tensor2tensor/rl/hero_wm_training_backup
+
 WorldModelsExperiments/breakout/log/*
 WorldModelsExperiments/breakout/record/*
 WorldModelsExperiments/breakout/tf_rnn/*
