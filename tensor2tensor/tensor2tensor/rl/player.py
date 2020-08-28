@@ -57,6 +57,8 @@ sys.path.append('../../../gym')
 import gym
 from gym.utils import play
 import numpy as np
+import pandas as pd
+import pickle
 
 sys.path.append('../../../tensor2tensor')
 import tensor2tensor
@@ -102,7 +104,7 @@ flags.DEFINE_boolean("dry_run", False,
                      "some random actions on environment")
 flags.DEFINE_string("model_ckpt", "",
                     "World model checkpoint path.")
-flags.DEFINE_string("wm_dir", "/home/student/t2t_train/mb_sd_pong_pretrained3/142/world_model",
+flags.DEFINE_string("wm_dir", "/home/student/results_training_server/pong_wm_training3/world_model",#"/home/student/t2t_train/mb_sd_pong_pretrained3/142/world_model",
                     "Directory with world model checkpoints. Inferred from "
                     "output_dir if empty.")
 flags.DEFINE_string("policy_dir", "",
@@ -115,7 +117,7 @@ flags.DEFINE_boolean("game_from_filenames", False,
                      "hparams.")
 flags.DEFINE_boolean('show_all_actions', False, 'Show all possible actions and their course')
 dry_run = False
-show_all_actions = True
+show_all_actions = False
 
 @registry.register_hparams
 def planner_small(): #todo adapt to tiny?
@@ -406,6 +408,7 @@ class SimAndRealEnvPlayer(PlayerEnv):
     else:
         ob_sim, reward_sim, _, _ = envs_step_tuples["sim_env"]
     ob_err = absolute_hinge_difference(ob_sim, ob_real)
+    ob_diff.append(ob_err)
 
     ob_real_aug = self._augment_observation(ob_real, reward_real,
                                             self.cumulative_real_reward)
@@ -713,7 +716,7 @@ def main(dry_run=False, show_all_actions=False):
     env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
     eval_hparams = trainer_lib.create_hparams('ppo_original_params')
     planner_hparams = hparams_lib.create_hparams('planner_small')
-    policy_dir= '~/t2t_train/mb_sd_pong_pretrained3/142/policy'
+    policy_dir= '/home/student/results_training_server/pong_wm_training3/policy'
     agent = make_agent_from_hparams(agent_type='policy', base_env=env.real_env, stacked_env=env.sim_env, loop_hparams=FLAGS.loop_hparams,
                                     policy_hparams=eval_hparams, planner_hparams=planner_hparams, model_dir="", policy_dir=policy_dir, sampling_temp=0.5, video_writers=())
 
@@ -747,7 +750,7 @@ def main(dry_run=False, show_all_actions=False):
         obsshow, obs4 = obs
         display_arr(screen, obsshow, transpose=True, video_size=video_size)
         observations.append(obsshow)
-        time.sleep(1)
+        time.sleep(0.5)
         pygame.display.flip()
         clock.tick(FLAGS.fps)
         actions = None
@@ -798,9 +801,17 @@ def main(dry_run=False, show_all_actions=False):
 
       env.step(PlayerEnv.RETURN_DONE_ACTION)  # reset
     observations = np.array(observations)
+    print(observations.shape)
+    #pd.DataFrame(observations).to_csv('obsfordiff.csv') # Must pass 2-d input
+    #np.savetxt('obsfordiff.csv', observations) # no 4d
+    #observations.save('obsfordiff.npy')
+    picklefile = open('obsfordiff.pkl', 'wb')
+    pickle.dump(observations, picklefile)
+    picklefile.close()
     lenframes = observations.shape[0]
     env.close()
     pygame.quit()
+    print('difference between images saved')
     return observations, lenframes, total_reward
   elif FLAGS.show_all_actions or show_all_actions: #press space and show all actions
       # build agent
@@ -917,7 +928,7 @@ def main(dry_run=False, show_all_actions=False):
       env.close()
       pygame.quit()
       return obs_total, lenframes, (trewardu, trewardn, trewardd)
-  else:
+  else: # take over role of agent and play
       env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
       total_reward = play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
       env.close()

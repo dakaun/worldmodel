@@ -88,7 +88,7 @@ flags.DEFINE_bool(
 # definitions possibly erroring. Apologies for the ugliness.
 try:
   flags.DEFINE_string("master", "", "Address of TensorFlow master.")
-  flags.DEFINE_string("output_dir", "pong_pretrained_player", "Base output directory for run.")
+  flags.DEFINE_string("output_dir", "/home/student/results_training_server/pong_wm_training3/policy", "Base output directory for run.")
   flags.DEFINE_string("schedule", "continuous_train_and_eval",
                       "Method of Experiment to run.")
   flags.DEFINE_integer("eval_steps", 100,
