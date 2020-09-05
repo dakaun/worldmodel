@@ -837,7 +837,7 @@ class BatchStackWrapper(BatchWrapper):
 
   def step(self, actions):
     if isinstance(self.env, player_utils.SimulatedGymEnv):
-        observations, rewards, dones, _ = self.env.step(actions)
+        observations, rewards, dones, _ = self.env.step(actions) # TODO skip 4 frames as in MaxAndSkipEnv
         self._history_buffer = np.roll(self._history_buffer, shift=-1, axis=1)
         self._history_buffer[:, -1, ...] = observations
         return (self._history_buffer, rewards, dones, {})
