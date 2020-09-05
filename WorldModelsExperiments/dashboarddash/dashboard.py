@@ -217,24 +217,30 @@ pong = html.Div(id='header1',
                 children=[
                     html.H1(children='Explaining Reinforcement Learning through its World Model'),
                     html.H2(children='Interact with the Pong World Model of Kaiser et al. (2019)'),
-                    dcc.Markdown('''
-                    This dashboard presents different possibilities to interact with the world model to generate explanations.
-                    The games enable to play and thus learn the limits of the world model.
-                    The overall aim is to gain an understanding of the world model and develop trust.
-                    
-                    There three different kind of explorations given:  
-                    
-                    1. Fully play inside the world model and decide each action of the agent - no agent is trained.  
-                    2. Both, the world model as well as agent are trained. The user can intervene single actions and observe the reactions.    
-                    3. Again, both components are trained. The user can pause the game to display all possible actions from there.
-                    
-                    The interface of the game shows three images (from left to right): the world model, the real 
-                    environment and the difference between the world model to the real environment.  
-                    The panel at the top shows the following additional information: c - cumulative reward, r - reward of the current frame,
-                    fc - counter of the frames. 
+                    html.Div(id='description', children=[
+                        dcc.Markdown('''
+                    This user interface presents different modules to interact with the world model to generate explanations for the agent's policy.
+                    The overall aim is to gain an understanding of the agent's policy and develop trust.
+
+                    **Modules**:  
+
+                    **&#9312** Fully play inside the world model and decide each action of the agent - no agent is trained.  
+                    **&#9313** Both, the world model as well as agent are trained. The user can intervene single actions and observe the reactions.    
+                    **&#9314** Again, both components are trained. The user can pause the game to display all possible actions from there.
                     '''),
+                        html.Img(src='assets/game_descrip.png',height=300),
+                        html.Div(id='speed_slider_div', children=[
+                            html.P(['Speed to run the Games:']),
+                            dcc.Slider(id='slider_speed',
+                                       min=0.1, max=1, step=0.1, value=0.3,
+                                       marks={0.1: 'Fast', 1: 'Slow'}),
+                            html.Div(id='speed_slider_div_placeholder', style={'display':'none'})
+                        ],
+                                 className='slider_div')
+                    ],
+                             className='ponggame_cluster_descrip'),
                     html.Div(id='playing_pong', children=[
-                        html.H3(children='Dashboard to play Pong inside the World Model.'),
+                        html.H3(children='Module: Focus on World Model'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to play Pong:']),
@@ -267,9 +273,8 @@ pong = html.Div(id='header1',
                                  className='video-descrip')
                     ],
                              className='ponggame_cluster'),
-
                     html.Div(id='pong_run_in_worldmodel', children=[
-                        html.H3(children='Dashboard to play Pong inside the World Model.'),
+                        html.H3(children='Module: Focus on Agent'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to run Pong and intervene with single actions:']),
@@ -301,13 +306,19 @@ pong = html.Div(id='header1',
                         className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel_showallactions', children=[
                         html.H3(
-                            children='Dashboard to play Pong inside the World Model and show all actions after pausing Game.'),
+                            children='Module: Display plot threads'),
                         html.Div(children=[
                             html.Div(children=[
                                 html.P(['Press Button to run Pong and pause to see all available actions:']),
                                 html.Button('Start Pong in World Model',
                                             id='start_gamep_alla',
-                                            n_clicks=0)
+                                            n_clicks=0),
+                                html.P(['Select Length for Plot Threads']),
+                                dcc.Slider(id='slider_plotlength',
+                                           min=5, max=20, step=1, value=10,
+                                           marks={
+                                               5: '5', 10: '10', 15: '15', 20: '20'
+                                           })
                                 ],
                                 className='button-cluster'),
                             dcc.Markdown('''
@@ -349,6 +360,13 @@ app.layout = html.Div([
 # todo below video display further information about each result
 # todo possible to refer back to frame number from video second - then ability to press button/input second of video to get more information about that gamestatus
 
+@app.callback(Output('speed_slider_div_placeholder', 'children'),
+              [Input('slider_speed', 'value')])
+def input_speed_games(speed):
+    if speed:
+        print('Speed: ', speed)
+    return speed
+
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
@@ -366,32 +384,29 @@ def display_page(pathname):
                Output('playing_gamep', 'width'),
                Output('playing_gamep_descrip', 'children')],
               [Input('url', 'pathname'),
-               Input('start_play_gamep', 'n_clicks')])
-def pong_playing(page, buttonclick):
+               Input('start_play_gamep', 'n_clicks'),
+               Input('speed_slider_div_placeholder', 'children')])
+def pong_playing(page, buttonclick, speed_game=0.3):
     if ('pong' in page) and buttonclick:
-        print('start playing game')
-        total_reward = player.main(dry_run=False)
-        print('game played')
+        print('Speed Playing Pong', speed_game)
+        total_reward = player.main(speed_game, dry_run=False)
         try:
             filename =[]
-            print('list files in dir')
             filelist = os.listdir('gym-results')
             filelist.sort()
             for file in filelist:
-                print(file)
                 if file.endswith('1.mp4'): filename.append(file)
-            print('open video file')
             videom = open('gym-results/' + filename[0], 'rb').read()
             encoded_video = base64.b64encode(videom).decode()
-            print('send video to dashboard')
             src= 'data:video/mp4;base64,{}'.format(encoded_video)
+            if total_reward == None:
+                total_reward=0
             children = 'Game well played with a total reward of ', str(
                 total_reward), '. The Video of your game is displayed here.'
         except:
             filename = "pong_playing.mp4"
             videom = open('assets/' + filename, 'rb').read()
             encoded_video = base64.b64encode(videom).decode()
-            print('send video to dashboard')
             src = 'data:video/mp4;base64,{}'.format(encoded_video)
             children = 'Game well played with a total reward of ', str(
                 total_reward), '. But the Video couldn\'t be saved.'
@@ -402,7 +417,6 @@ def pong_playing(page, buttonclick):
         filename = "pong_playing.mp4"
         videom = open('assets/'+ filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
-        print('send video to dashboard')
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
         height = 264
         width = 480
@@ -449,12 +463,12 @@ def pong_singleactions(page, buttonclick):
                Output('game_videop_allactions', 'width'),
                Output('game_videop_allactions_descrip', 'children')],
               [Input('url', 'pathname'),
-               Input('start_gamep_alla', 'n_clicks')])
-def pong_allactions(page, buttonclick):
-    if ('pong' in page) and buttonclick:
-        observations, fin_counter, (trewardu, trewardn, trewardd)= player.main(dry_run=False, show_all_actions=True)
+               Input('start_gamep_alla', 'n_clicks'),
+               Input('slider_plotlength', 'value')])
+def pong_allactions(page, buttonclick, slider_length):
+    if ('pong' in page) and buttonclick and slider_length:
+        observations, fin_counter, (trewardu, trewardn, trewardd), children= player.main(slider_length, dry_run=False, show_all_actions=True)
         filename='obs_video_pong_aa.webm'
-        print(observations.shape)
         height = observations[0].shape[0]
         width = observations[0].shape[1]
         observations = observations[:, :, :, [2, 1, 0]]
@@ -465,11 +479,13 @@ def pong_allactions(page, buttonclick):
         videom =open(filename, 'rb').read()
         encoded_video= base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
-        children = "The foils achieved the following reward in the game: Action up: ", trewardu, " Action noop: ", trewardn, " Action down: ", trewardd
+        if not children:
+            children = "Each plot thread achieved the following reward in the game: " \
+                       "Action up: ", trewardu, \
+                       " Action noop: ", trewardn, \
+                       " Action down: ", trewardd
         height *= 1.5
-        print('height ', height)
         width *= 1.5
-        print('width ', width)
         return src, height, width, children
     else:
         filename = 'pong_allactions.webm'

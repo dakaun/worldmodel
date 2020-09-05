@@ -7,7 +7,7 @@ body {
     #border-style: dotted;
     float:left;
     width: 49%;
-    height:180px;
+    height:auto;
     margin-right: 0px;
     display: inline-block;
     position: relativ;
@@ -19,7 +19,7 @@ body {
     #border-style: dotted;
     float:right;
     width:49%;
-    height:180px;
+    height:auto;
     margin-left: 0px;
     display: inline-block;
     position:relativ;
@@ -48,8 +48,22 @@ body {
     position: relativ;
     margin:auto;
     #border-style: double;
-    width:1300px;
-    position:relativ;
+    width:1100px;
 }
 
+.ponggame_cluster_descrip {
+    background-color: #C0C0C0;
+    border-radius: 10px;
+    box-shadow:2px 2px 3px darkgray;
+    position: relativ;
+    margin:auto;
+    #border-style: double;
+    width:1300px;
+    padding: 8px;
+}
 
+.slider_div {
+    width: 300px;
+    position:relativ;
+    margin:auto
+}
