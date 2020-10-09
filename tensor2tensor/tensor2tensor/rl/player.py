@@ -120,7 +120,7 @@ dry_run = False
 show_all_actions = False
 
 @registry.register_hparams
-def planner_small(): #todo adapt to tiny?
+def planner_small():
   return HParams(
       num_rollouts=64,
       planning_horizon=16,
@@ -659,8 +659,26 @@ def resume_game(agent, env, screen, observations, simenv_pvar, simenv_var, reale
     #pygame.quit()
     return observations, tot_reward
 
-def main(speed_game=0.3, slider_length= None, dry_run=False, show_all_actions=False):
+def main(game_name='pong', speed_game=0.1, slider_length= None, dry_run=False, show_all_actions=False):
+    '''
+    main method containing the different modules of the user interface
+    :param game_name: name of the game (pong and breakout)
+    :param speed_game: speed of the games
+    :param slider_length: length of plot thread of module 3
+    :param dry_run: boolean of module 2
+    :param show_all_actions: boolean of module 3
+    :return: videos for user interface
+    '''
+    print('reset tf graph')
     tf.reset_default_graph()
+    tf.get_default_session()
+    FLAGS.loop_hparams = "game=" + game_name
+    if game_name =='pong':
+        FLAGS.wm_dir = "/home/student/results_training_server/pong_wm_training3/world_model"
+        policy_dir = '/home/student/results_training_server/pong_wm_training3/policy'
+    elif game_name == 'breakout':
+        FLAGS.wm_dir = "/home/student/t2t_train/test1/breakout/58/world_model"  # "/home/student/results_training_server/pong_wm_training3/world_model"
+        policy_dir = '/home/student/t2t_train/test1/breakout/58/policy'
     # gym.logger.set_level(gym.logger.DEBUG)
     hparams = registry.hparams(FLAGS.loop_hparams_set)  # add planner_small
     hparams.parse(FLAGS.loop_hparams)
@@ -707,18 +725,12 @@ def main(speed_game=0.3, slider_length= None, dry_run=False, show_all_actions=Fa
             env = make_real_env()
         env = SingleEnvPlayer(env, action_meanings)  # pylint: disable=redefined-variable-type
 
-    # env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
-    # env.reset()
-    # for i in range(10):
-    #    obs, rew, env_done, info = env.step(i%6)
-    #    rendered = env.render(mode='rgb_array')
 
-    if FLAGS.dry_run or dry_run:  # intervene with single action
+    if FLAGS.dry_run or dry_run:  # module 2: intervene with single action
         # build agent
         env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
         eval_hparams = trainer_lib.create_hparams('ppo_original_params')
         planner_hparams = hparams_lib.create_hparams('planner_small')
-        policy_dir = '/home/student/results_training_server/pong_wm_training3/policy'
         agent = make_agent_from_hparams(agent_type='policy', base_env=env.real_env, stacked_env=env.sim_env,
                                         loop_hparams=FLAGS.loop_hparams,
                                         policy_hparams=eval_hparams, planner_hparams=planner_hparams, model_dir="",
@@ -740,7 +752,6 @@ def main(speed_game=0.3, slider_length= None, dry_run=False, show_all_actions=Fa
         env_done = False
         total_reward = 0
         for _ in range(1):
-            # teilweise von play.play kopiert
             observations = []
             while not env_done:
                 if actions == None:
@@ -812,10 +823,11 @@ def main(speed_game=0.3, slider_length= None, dry_run=False, show_all_actions=Fa
         pickle.dump(observations, picklefile)
         picklefile.close()
         lenframes = observations.shape[0]
+        pygame.display.quit()
         pygame.quit()
         env.close()
         return observations, lenframes, total_reward
-    elif FLAGS.show_all_actions or show_all_actions:  # press space and show all actions
+    elif FLAGS.show_all_actions or show_all_actions:  # module 3: press space and show all actions
         # build agent
         env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
         eval_hparams = trainer_lib.create_hparams('ppo_original_params')
@@ -930,12 +942,15 @@ def main(speed_game=0.3, slider_length= None, dry_run=False, show_all_actions=Fa
             width = obs_total.shape[2] * 1.5
             lenframes = obs_total.shape[0]
             trewardd, trewardn, trewardu = 0, 0, 0
+        pygame.display.quit()
         pygame.quit()
         env.close()
         return obs_total, lenframes, (trewardu, trewardn, trewardd), children
-    else:  # take over role of agent and play
+    else:  # module 1: take over role of agent and play
         env = player_utils.wrap_with_monitor(env, FLAGS.video_dir)
         total_reward = play.play(env, zoom=FLAGS.zoom, fps=FLAGS.fps)
+        pygame.display.quit()
+        pygame.quit()
         env.close()
         return total_reward
     env.close()
