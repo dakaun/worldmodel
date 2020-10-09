@@ -239,7 +239,8 @@ class PlayerEnv(gym.Env):
       envs_step_tuples = self._player_actions()[action]()
     elif self._wait and action == self.name_to_action_num["NOOP"]:
       # Ignore no-op, do not pass to environment.
-      envs_step_tuples = self._last_step_tuples
+      envs_step_tuples = self._last_step_tuples #
+      self._frame_counter +=1
       if isinstance(self.sim_env, rl_utils.BatchStackWrapper):
           envs_step_tuples = dict(envs_step_tuples)
           envs_step_tuples['sim_env'] = list(envs_step_tuples['sim_env'])
@@ -609,6 +610,7 @@ def display_arr(screen, arr, video_size, transpose):
 
 def resume_game(agent, env, screen, observations, simenv_pvar, simenv_var, realenv_var, pauseobs, frame_counter,
                 laststeptuples, pause_reward, action, slider_length):
+    slider_length=5
     env.sim_env.env.env.batch_env._actions_t = simenv_pvar['actions']
     env.sim_env.env.env.batch_env._batch_env = simenv_pvar['batch_env']
     env.sim_env.env.env.batch_env._dones_t = simenv_pvar['dones']
@@ -670,15 +672,17 @@ def main(game_name='pong', speed_game=0.1, slider_length= None, dry_run=False, s
     :return: videos for user interface
     '''
     print('reset tf graph')
+    import os
+    print(os.getcwd())
     tf.reset_default_graph()
     tf.get_default_session()
     FLAGS.loop_hparams = "game=" + game_name
     if game_name =='pong':
-        FLAGS.wm_dir = "/home/student/results_training_server/pong_wm_training3/world_model"
-        policy_dir = '/home/student/results_training_server/pong_wm_training3/policy'
+        FLAGS.wm_dir = "assets/wm_training_results/pong/results_training_server/pong_wm_training3/world_model" # /home/student/PycharmProjects/worldmodel/WorldModelsExperiments/dashboarddash/assets/wm_training_results/pong/results_training_server/pong_wm_training3/policy
+        policy_dir = 'assets/wm_training_results/pong/results_training_server/pong_wm_training3/policy'
     elif game_name == 'breakout':
-        FLAGS.wm_dir = "/home/student/t2t_train/test1/breakout/58/world_model"  # "/home/student/results_training_server/pong_wm_training3/world_model"
-        policy_dir = '/home/student/t2t_train/test1/breakout/58/policy'
+        FLAGS.wm_dir = "assets/wm_training_results/breakout/58/world_model"  # "/home/student/results_training_server/pong_wm_training3/world_model"
+        policy_dir = 'assets/wm_training_results/breakout/58/policy'
     # gym.logger.set_level(gym.logger.DEBUG)
     hparams = registry.hparams(FLAGS.loop_hparams_set)  # add planner_small
     hparams.parse(FLAGS.loop_hparams)
@@ -819,9 +823,9 @@ def main(game_name='pong', speed_game=0.1, slider_length= None, dry_run=False, s
         # pd.DataFrame(observations).to_csv('obsfordiff.csv') # Must pass 2-d input
         # np.savetxt('obsfordiff.csv', observations) # no 4d
         # observations.save('obsfordiff.npy')
-        picklefile = open('obsfordiff.pkl', 'wb')
-        pickle.dump(observations, picklefile)
-        picklefile.close()
+        #picklefile = open('obsfordiff.pkl', 'wb')
+        #pickle.dump(observations, picklefile)
+        #picklefile.close()
         lenframes = observations.shape[0]
         pygame.display.quit()
         pygame.quit()
@@ -832,7 +836,7 @@ def main(game_name='pong', speed_game=0.1, slider_length= None, dry_run=False, s
         env.sim_env = rl_utils.BatchStackWrapper(env.sim_env, stack_size=4)
         eval_hparams = trainer_lib.create_hparams('ppo_original_params')
         planner_hparams = hparams_lib.create_hparams('planner_small')
-        policy_dir = '~/t2t_train/mb_sd_pong_pretrained3/142/policy'
+        #policy_dir = '~/t2t_train/mb_sd_pong_pretrained3/142/policy'
         agent = make_agent_from_hparams(agent_type='policy', base_env=env.real_env, stacked_env=env.sim_env,
                                         loop_hparams=FLAGS.loop_hparams,
                                         policy_hparams=eval_hparams, planner_hparams=planner_hparams, model_dir="",
