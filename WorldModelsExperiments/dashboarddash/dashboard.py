@@ -209,14 +209,14 @@ carracing = html.Div(id='header1',
                                      )
                      ])
 
-pong = html.Div(id='header1',
-                style={
+worldmodel_kaiser = html.Div(id='header1',
+                             style={
                     'textAlign': 'center',
                     'background-color': 'LightGray'
                 },
-                children=[
+                             children=[
                     html.H1(children='Explaining Reinforcement Learning through its World Model'),
-                    html.H2(children='Interact with the Pong World Model of Kaiser et al. (2019)'),
+                    html.H2(children='Interact with the World Model of Kaiser et al. (2019)'),
                     html.Div(id='description', children=[
                         dcc.Markdown('''
                     This user interface presents different modules to interact with the world model to generate explanations for the agent's policy.
@@ -229,11 +229,20 @@ pong = html.Div(id='header1',
                     **&#9314** Again, both components are trained. The user can pause the game to display all possible actions from there.
                     '''),
                         html.Img(src='assets/game_descrip.png',height=300),
+                        html.Div(id='', children=[
+                            html.P(['Choose a Game:']),
+                            dcc.Dropdown(id='dropdown_game',
+                                         options=[
+                                             {'label': 'Pong', 'value': 'pong'},
+                                             {'label': 'Breakout', 'value': 'breakout'}
+                                         ],
+                                         value='pong', clearable=False)
+                            ], className='slider_div'),
                         html.Div(id='speed_slider_div', children=[
-                            html.P(['Speed to run the Games:']),
+                            html.P(['Speed of the game:']),
                             dcc.Slider(id='slider_speed',
-                                       min=0.1, max=1, step=0.1, value=0.3,
-                                       marks={0.1: 'Fast', 1: 'Slow'}),
+                                       min=0, max=1, step=0.1, value=0.3,
+                                       marks={0: 'Fast', 1: 'Slow'}),
                             html.Div(id='speed_slider_div_placeholder', style={'display':'none'})
                         ],
                                  className='slider_div')
@@ -243,15 +252,15 @@ pong = html.Div(id='header1',
                         html.H3(children='Module: Focus on World Model'),
                         html.Div(children=[
                             html.Div(children=[
-                                html.P(['Press Button to play Pong:']),
-                                html.Button('Start to play Pong',
+                                html.P(['Press button to play:']),
+                                html.Button('Start to play',
                                             id='start_play_gamep',
                                             n_clicks=0)
                                 ],
                                 className='button-cluster'
                                 ),
                             dcc.Markdown('''
-                            Keys to Play:
+                            Keys to play:
                             
                             **A**: Down, **D**: Up  
                             **N**: Perform NOOP,  
@@ -277,14 +286,14 @@ pong = html.Div(id='header1',
                         html.H3(children='Module: Focus on Agent'),
                         html.Div(children=[
                             html.Div(children=[
-                                html.P(['Press Button to run Pong and intervene with single actions:']),
-                                html.Button('Start Pong in World Model',
+                                html.P(['Press button to run the game and intervene with single actions:']),
+                                html.Button('Start to play',
                                             id='start_gamep_singlea',
                                             n_clicks=0)
                                 ],
                                 className='button-cluster'),
                             dcc.Markdown('''
-                            Keys to Intervene:
+                            Keys to intervene:
                             
                             **A**: Down, **D**: Up
                             **N**: Perform NOOP,  
@@ -306,14 +315,14 @@ pong = html.Div(id='header1',
                         className='ponggame_cluster'),
                     html.Div(id='pong_run_in_worldmodel_showallactions', children=[
                         html.H3(
-                            children='Module: Display plot threads'),
+                            children='Module: Display Plot Threads'),
                         html.Div(children=[
                             html.Div(children=[
-                                html.P(['Press Button to run Pong and pause to see all available actions:']),
-                                html.Button('Start Pong in World Model',
+                                html.P(['Press button to run the game and pause to play all possible actions:']),
+                                html.Button('Start to play',
                                             id='start_gamep_alla',
                                             n_clicks=0),
-                                html.P(['Select Length for Plot Threads']),
+                                html.P(['Select length for plot threads']),
                                 dcc.Slider(id='slider_plotlength',
                                            min=5, max=20, step=1, value=10,
                                            marks={
@@ -322,7 +331,7 @@ pong = html.Div(id='header1',
                                 ],
                                 className='button-cluster'),
                             dcc.Markdown('''
-                            Keys to Intervene:
+                            Keys to intervene:
                             
                             **Space**: Pause
                             ''',
@@ -342,54 +351,56 @@ pong = html.Div(id='header1',
                             className='ponggame_cluster')
                 ])
 
-overview = html.Div(id='header1',
-                    style={
-                          'textAlign': 'center',
-                          'background-color': 'LightGray'
-                      },
-                    children=[
-                        html.H1('Explanations of different World Model States'),
-                        html.H3(children='Choose either CarRacing or Breakout to display Page')
-                    ])
-
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id='page-content')
 ])
 
-# todo below video display further information about each result
-# todo possible to refer back to frame number from video second - then ability to press button/input second of video to get more information about that gamestatus
-
-@app.callback(Output('speed_slider_div_placeholder', 'children'),
-              [Input('slider_speed', 'value')])
-def input_speed_games(speed):
-    if speed:
-        print('Speed: ', speed)
-    return speed
-
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
+    '''
+    method to switch between pages.
+    worldmodel_kaiser: world model von kaiser et al. mit pong und breakout
+    breakout: world model von ha et al. mit breakout
+    carracing: world model von ha et al. mit carracing
+    :param pathname: pagename
+    :return: page
+    '''
     if pathname=='/':
-        return overview
+        return worldmodel_kaiser
     elif pathname=='/breakout':
         return breakout
     elif pathname=='/carracing':
         return carracing
-    elif pathname=='/pong':
-        return pong
+
+@app.callback(Output('speed_slider_div_placeholder', 'children'),
+              [Input('slider_speed', 'value')])
+def input_speed_games(speed):
+    '''
+    adapt speed game of worldmodel_kaiser games
+    :param speed: get speed
+    :return: speed
+    '''
+    return speed
 
 @app.callback([Output('playing_gamep', 'src'),
                Output('playing_gamep', 'height'),
                Output('playing_gamep', 'width'),
                Output('playing_gamep_descrip', 'children')],
-              [Input('url', 'pathname'),
+              [Input('dropdown_game', 'value'),
                Input('start_play_gamep', 'n_clicks'),
                Input('speed_slider_div_placeholder', 'children')])
-def pong_playing(page, buttonclick, speed_game=0.3):
-    if ('pong' in page) and buttonclick:
-        print('Speed Playing Pong', speed_game)
-        total_reward = player.main(speed_game, dry_run=False)
+def pong_playing(value, buttonclick, speed_game):
+    '''
+    Module 1: Focus on world model - take over the role of the agent and define actions
+    :param value: name of the game (either pong or breakout)
+    :param buttonclick: start of the game by clicking the start button
+    :param speed_game: game of the speed
+    :return: video of the game including size of the game
+    '''
+    if buttonclick:
+        total_reward = player.main(game_name=value, speed_game=speed_game)
         try:
             filename =[]
             filelist = os.listdir('gym-results')
@@ -414,7 +425,7 @@ def pong_playing(page, buttonclick, speed_game=0.3):
         width = 480
         return src, height, width, children
     else:
-        filename = "pong_playing.mp4"
+        filename = "initial_module1.mp4"
         videom = open('assets/'+ filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
@@ -428,11 +439,20 @@ def pong_playing(page, buttonclick, speed_game=0.3):
                Output('initial_game_videop', 'height'),
                Output('initial_game_videop', 'width'),
                Output('initial_game_videop_descrip', 'children')],
-              [Input('url', 'pathname'),
-               Input('start_gamep_singlea', 'n_clicks')])
-def pong_singleactions(page, buttonclick):
-    if ('pong' in page) and buttonclick:
-        observations, fin_counter, total_reward = player.main(dry_run=True)
+              [Input('dropdown_game', 'value'),
+               Input('start_gamep_singlea', 'n_clicks'),
+               Input('speed_slider_div_placeholder', 'children')])
+def pong_singleactions(value, buttonclick, speed_game):
+    '''
+    Module 2: Focus on agent - intervene the trajectory with single actions
+    :param value: name of the game (either pong or breakout)
+    :param buttonclick: start of the game by clicking the start button
+    :param speed_game: game of the speed
+    :return: video of the game including size of the game
+    '''
+    print('Speed: ', speed_game)
+    if buttonclick:
+        observations, fin_counter, total_reward = player.main(game_name=value, speed_game=speed_game, dry_run=True)
         filename='obs_video_pong_sa.webm'
         height = observations[0].shape[0]
         width = observations[0].shape[1]
@@ -449,7 +469,7 @@ def pong_singleactions(page, buttonclick):
         width *= 2
         return src, height, width, children
     else:
-        filename = 'pong_singleaction.webm'
+        filename = 'initial_module2.webm'
         videom = open('assets/' + filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
@@ -462,12 +482,22 @@ def pong_singleactions(page, buttonclick):
                Output('game_videop_allactions', 'height'),
                Output('game_videop_allactions', 'width'),
                Output('game_videop_allactions_descrip', 'children')],
-              [Input('url', 'pathname'),
+              [Input('dropdown_game', 'value'),
                Input('start_gamep_alla', 'n_clicks'),
-               Input('slider_plotlength', 'value')])
-def pong_allactions(page, buttonclick, slider_length):
-    if ('pong' in page) and buttonclick and slider_length:
-        observations, fin_counter, (trewardu, trewardn, trewardd), children= player.main(slider_length, dry_run=False, show_all_actions=True)
+               Input('slider_plotlength', 'value'),
+               Input('speed_slider_div_placeholder', 'children')])
+def pong_allactions(value, buttonclick, slider_length, speed_game):
+    '''
+    Module 3: Display all plot threads - pause within the game to display all possible actions and the following plot threads
+    :param value: name of the game (either pong or breakout)
+    :param buttonclick: start of the game by clicking the start button
+    :param slider_length: length of the plot threads
+    :param speed_game: game of the speed
+    :return: video of the game including size of the game
+    '''
+    print('Speed: ', speed_game)
+    if buttonclick and slider_length:
+        observations, fin_counter, (trewardu, trewardn, trewardd), children= player.main(game_name=value, speed_game=speed_game, slider_length=slider_length, show_all_actions=True)
         filename='obs_video_pong_aa.webm'
         height = observations[0].shape[0]
         width = observations[0].shape[1]
@@ -488,7 +518,7 @@ def pong_allactions(page, buttonclick, slider_length):
         width *= 1.5
         return src, height, width, children
     else:
-        filename = 'pong_allactions.webm'
+        filename = 'initial_module3.webm'
         videom = open('assets/' + filename, 'rb').read()
         encoded_video = base64.b64encode(videom).decode()
         src = 'data:video/mp4;base64,{}'.format(encoded_video)
@@ -629,4 +659,4 @@ def breakout_allactions(page, buttonclick):
         return src, height, width
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='0.0.0.0', port=1874)
+    app.run_server(debug=True, host='0.0.0.0', port=1873)
