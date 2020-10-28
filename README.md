@@ -15,7 +15,8 @@ The package is from <http://github.com/openai/gym> (VERSION = '0.12.0') and prov
 The world model applied in this work is from Kaiser et al. (2019). 
 The according code is part of a deep learning library from Tensorflow <http://github.com/tensorflow/tensor2tensor> (VERSION='1.13.1').
 We use the model-based algorithm and trained the model by ourselves using *tensor2tensor/tensor2tensor/rl/trainer_model_based.py* and a stochastic-discrete model.   
-Pretrained models are also available using 
+
+Further pretrained models from Tensorflow are also available using 
 ```
 gsutil -m cp -r gs://tensor2tensor-checkpoints/modelrl_experiments/train_sd/142/ $OUTPUT_DIR
 ```
