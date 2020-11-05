@@ -59,6 +59,7 @@ from gym.utils import play
 import numpy as np
 import pandas as pd
 import pickle
+import os
 
 sys.path.append('../../../tensor2tensor')
 import tensor2tensor
@@ -672,8 +673,6 @@ def main(game_name='pong', speed_game=0.1, slider_length= None, dry_run=False, s
     :return: videos for user interface
     '''
     print('reset tf graph')
-    import os
-    print(os.getcwd())
     tf.reset_default_graph()
     tf.get_default_session()
     FLAGS.loop_hparams = "game=" + game_name
@@ -684,6 +683,8 @@ def main(game_name='pong', speed_game=0.1, slider_length= None, dry_run=False, s
         FLAGS.wm_dir = "assets/wm_training_results/breakout/58/world_model"  # "/home/student/results_training_server/pong_wm_training3/world_model"
         policy_dir = 'assets/wm_training_results/breakout/58/policy'
     # gym.logger.set_level(gym.logger.DEBUG)
+    if not (os.path.exists(FLAGS.wm_dir) and os.path.exists(policy_dir)):
+      raise Exception('There are no training files. Check out the README to download a trained model from googlecloud.')
     hparams = registry.hparams(FLAGS.loop_hparams_set)  # add planner_small
     hparams.parse(FLAGS.loop_hparams)
     # Not important for experiments past 2018
